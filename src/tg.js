@@ -1,0 +1,151 @@
+// Telegram WebApp SDK wrapper
+const tgApp = window.Telegram?.WebApp;
+
+function hexFromTg(color) {
+  if (!color || typeof color !== 'string') return null;
+  const c = color.trim();
+  return c.startsWith('#') ? c : `#${c}`;
+}
+
+function applyTelegramTheme() {
+  const tp = tgApp?.themeParams;
+  if (!tp?.bg_color || !tp?.text_color) return;
+  const root = document.documentElement;
+  root.style.setProperty('--erd-paper', hexFromTg(tp.bg_color));
+  root.style.setProperty('--erd-ink', hexFromTg(tp.text_color));
+  const hint = tp.hint_color ? hexFromTg(tp.hint_color) : null;
+  if (hint) root.style.setProperty('--erd-muted', hint);
+}
+
+// Initialize
+if (tgApp) {
+  tgApp.ready();
+  tgApp.expand();
+  applyTelegramTheme();
+  tgApp.onEvent?.('themeChanged', applyTelegramTheme);
+}
+
+const tg = {
+  // Raw WebApp reference
+  app: tgApp,
+
+  // User data
+  get user() {
+    return tgApp?.initDataUnsafe?.user ?? null;
+  },
+
+  get userName() {
+    const u = this.user;
+    if (!u) return 'GUEST';
+    return (u.first_name || u.username || 'GUEST').toUpperCase();
+  },
+
+  // Color scheme
+  get isDark() {
+    return tgApp?.colorScheme === 'dark';
+  },
+
+  // Main Button
+  MainButton: {
+    setText(text) {
+      tgApp?.MainButton?.setText(text);
+    },
+    show() {
+      tgApp?.MainButton?.show();
+    },
+    hide() {
+      tgApp?.MainButton?.hide();
+    },
+    enable() {
+      tgApp?.MainButton?.enable();
+    },
+    disable() {
+      tgApp?.MainButton?.disable();
+    },
+    showProgress() {
+      tgApp?.MainButton?.showProgress();
+    },
+    hideProgress() {
+      tgApp?.MainButton?.hideProgress();
+    },
+    onClick(fn) {
+      tgApp?.MainButton?.onClick(fn);
+    },
+    offClick(fn) {
+      tgApp?.MainButton?.offClick(fn);
+    },
+    setParams(params) {
+      tgApp?.MainButton?.setParams(params);
+    },
+  },
+
+  // Back Button
+  BackButton: {
+    show() {
+      tgApp?.BackButton?.show();
+    },
+    hide() {
+      tgApp?.BackButton?.hide();
+    },
+    onClick(fn) {
+      tgApp?.BackButton?.onClick(fn);
+    },
+    offClick(fn) {
+      tgApp?.BackButton?.offClick(fn);
+    },
+  },
+
+  // Haptic feedback
+  haptic: {
+    impact(style = 'light') {
+      tgApp?.HapticFeedback?.impactOccurred(style);
+    },
+    notification(type = 'success') {
+      tgApp?.HapticFeedback?.notificationOccurred(type);
+    },
+    selection() {
+      tgApp?.HapticFeedback?.selectionChanged();
+    },
+  },
+
+  // Open Telegram / system share for current product or page URL
+  shareLink(url, text = '') {
+    const share = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    if (tgApp?.openTelegramLink) {
+      tgApp.openTelegramLink(share);
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ url, title: text }).catch(() => {
+        window.open(share, '_blank', 'noopener,noreferrer');
+      });
+      return;
+    }
+    window.open(share, '_blank', 'noopener,noreferrer');
+  },
+
+  // Send order data to bot
+  sendOrder(orderData) {
+    if (tgApp) {
+      tgApp.sendData(JSON.stringify(orderData));
+    } else {
+      console.log('[TG] sendData:', JSON.stringify(orderData, null, 2));
+    }
+  },
+
+  // Close mini app
+  close() {
+    tgApp?.close();
+  },
+
+  // Check if running inside Telegram
+  get isAvailable() {
+    return !!tgApp;
+  },
+
+  applyTheme() {
+    applyTelegramTheme();
+  },
+};
+
+export default tg;

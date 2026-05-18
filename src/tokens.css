@@ -1,0 +1,16 @@
+:root {
+  --erd-ink: #000000;
+  --erd-paper: #ffffff;
+  --erd-ox: #7a0d0d;
+  --erd-rule: rgba(0, 0, 0, 0.12);
+  --erd-muted: rgba(0, 0, 0, 0.55);
+  --font-sans: "Inter", "Helvetica Neue", -apple-system, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Editorial / luxury rhythm (refs: sparse hero, magazine measure, airy grids) */
+  --erd-gutter: 18px;
+  --erd-hero-split-height: clamp(280px, 58vh, 520px);
+  --erd-editorial-measure: min(100%, 21rem);
+  --erd-grid-gap: 10px;
+}

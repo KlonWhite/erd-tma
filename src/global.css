@@ -1,0 +1,54 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--erd-paper);
+  color: var(--erd-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* TMA full-screen */
+#root {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Scrollable screen container */
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(60px + var(--safe-bottom));
+}
+
+.screen--dark {
+  background: var(--erd-ink);
+  color: var(--erd-paper);
+}
+
+/* No bottom nav screens */
+.screen--no-nav {
+  padding-bottom: 0;
+}
+
+@keyframes erd-blink {
+  50% { opacity: 0; }
+}
