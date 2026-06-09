@@ -17,12 +17,48 @@ function applyTelegramTheme() {
   if (hint) root.style.setProperty('--erd-muted', hint);
 }
 
+function toSafePx(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? `${n}px` : '0px';
+}
+
+/** Чёлка, Dynamic Island, панель Telegram — Bot API 7.7+ contentSafeAreaInset */
+function applySafeAreaInsets() {
+  if (typeof document === 'undefined') return;
+
+  const root = document.documentElement;
+  const content = tgApp?.contentSafeAreaInset ?? {};
+  const device = tgApp?.safeAreaInset ?? {};
+
+  root.style.setProperty('--tg-content-safe-top', toSafePx(content.top));
+  root.style.setProperty('--tg-content-safe-bottom', toSafePx(content.bottom));
+  root.style.setProperty('--tg-content-safe-left', toSafePx(content.left));
+  root.style.setProperty('--tg-content-safe-right', toSafePx(content.right));
+
+  root.style.setProperty('--tg-device-safe-top', toSafePx(device.top));
+  root.style.setProperty('--tg-device-safe-bottom', toSafePx(device.bottom));
+  root.style.setProperty('--tg-device-safe-left', toSafePx(device.left));
+  root.style.setProperty('--tg-device-safe-right', toSafePx(device.right));
+}
+
+function safeInit(fn, label) {
+  try {
+    fn();
+  } catch (err) {
+    console.warn(`[tg] ${label}:`, err);
+  }
+}
+
 // Initialize
 if (tgApp) {
-  tgApp.ready();
-  tgApp.expand();
-  applyTelegramTheme();
-  tgApp.onEvent?.('themeChanged', applyTelegramTheme);
+  safeInit(() => tgApp.ready(), 'ready');
+  safeInit(() => tgApp.expand(), 'expand');
+  safeInit(applyTelegramTheme, 'theme');
+  safeInit(applySafeAreaInsets, 'safeArea');
+  safeInit(() => tgApp.onEvent?.('themeChanged', applyTelegramTheme), 'onTheme');
+  safeInit(() => tgApp.onEvent?.('safeAreaChanged', applySafeAreaInsets), 'onSafeArea');
+  safeInit(() => tgApp.onEvent?.('contentSafeAreaChanged', applySafeAreaInsets), 'onContentSafeArea');
+  safeInit(() => tgApp.onEvent?.('viewportChanged', applySafeAreaInsets), 'onViewport');
 }
 
 const tg = {
@@ -145,6 +181,10 @@ const tg = {
 
   applyTheme() {
     applyTelegramTheme();
+  },
+
+  applySafeArea() {
+    applySafeAreaInsets();
   },
 
   /**

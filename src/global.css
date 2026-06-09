@@ -30,6 +30,19 @@ body {
   bottom: 0;
 }
 
+/* Top chrome — шапка под чёлку / Dynamic Island / панель Telegram */
+.erd-app-header {
+  padding:
+    calc(12px + var(--safe-top))
+    calc(var(--erd-gutter) + var(--safe-right))
+    12px
+    calc(var(--erd-gutter) + var(--safe-left));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 /* Scrollable screen container */
 .screen {
   flex: 1;

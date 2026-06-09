@@ -29,6 +29,8 @@ export default function BottomNav() {
       borderTop: '1px solid var(--erd-rule)',
       display: 'flex',
       paddingBottom: 'var(--safe-bottom)',
+      paddingLeft: 'var(--safe-left)',
+      paddingRight: 'var(--safe-right)',
     }}>
       {NAV_ITEMS.map(({ path, label, isActive }) => {
         const active = isActive(location.pathname);

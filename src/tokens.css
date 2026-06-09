@@ -5,8 +5,27 @@
   --erd-rule: rgba(0, 0, 0, 0.12);
   --erd-muted: rgba(0, 0, 0, 0.55);
   --font-sans: "Inter", "Helvetica Neue", -apple-system, sans-serif;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* iOS notch / Dynamic Island + Telegram header (см. tg.js → contentSafeAreaInset) */
+  --safe-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-top, 0px),
+    var(--tg-device-safe-top, 0px)
+  );
+  --safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-bottom, 0px),
+    var(--tg-device-safe-bottom, 0px)
+  );
+  --safe-left: max(
+    env(safe-area-inset-left, 0px),
+    var(--tg-content-safe-left, 0px),
+    var(--tg-device-safe-left, 0px)
+  );
+  --safe-right: max(
+    env(safe-area-inset-right, 0px),
+    var(--tg-content-safe-right, 0px),
+    var(--tg-device-safe-right, 0px)
+  );
 
   /* Editorial / luxury rhythm (refs: sparse hero, magazine measure, airy grids) */
   --erd-gutter: 18px;

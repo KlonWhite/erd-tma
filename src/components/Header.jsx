@@ -17,14 +17,10 @@ export default function Header({ dark = false }) {
   };
 
   return (
-    <div style={{
-      padding: '12px var(--erd-gutter)',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      borderBottom: `1px solid ${border}`,
-      flexShrink: 0,
-    }}>
+    <div
+      className="erd-app-header"
+      style={{ borderBottom: `1px solid ${border}` }}
+    >
       <Wordmark size={11} color={c} />
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
         <button onClick={() => go('/search')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
