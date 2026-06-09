@@ -24,12 +24,20 @@ export async function handleWebAppData(ctx, bot) {
     order = await createOrderFromPayload(payload, ctx.from);
   }
 
-  await notifyAdminsNewOrder(bot, order);
+  const alreadyNotified = (order.notifications ?? []).some((n) => n.event === 'order_created');
 
-  await ctx.reply(
-    `✅ Заказ <b>${order.public_id}</b> принят.\nМы свяжемся с вами в ближайшее время.`,
-    { parse_mode: 'HTML' },
-  );
+  if (!alreadyNotified) {
+    await notifyAdminsNewOrder(bot, order);
+    await ctx.reply(
+      `✅ Заказ <b>${order.public_id}</b> принят.\nМы свяжемся с вами в ближайшее время.`,
+      { parse_mode: 'HTML' },
+    );
+  } else {
+    await ctx.reply(
+      `✅ Заказ <b>${order.public_id}</b> уже оформлен.`,
+      { parse_mode: 'HTML' },
+    );
+  }
 
   return true;
 }

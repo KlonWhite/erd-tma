@@ -15,6 +15,7 @@ import {
   shippingNeedsAddress,
 } from '../utils/checkout.js';
 import { createOrderFromCheckout } from '../lib/ordersDb.js';
+import { notifyOrderCreated } from '../lib/notifyOrder.js';
 import { isSupabaseConfigured } from '../lib/supabase.js';
 import tg from '../tg.js';
 
@@ -146,7 +147,11 @@ export default function Checkout() {
       await createOrderFromCheckout(order, tgUser);
 
       if (promo?.code) {
-        await incrementPromoUsage(promo.code);
+        try {
+          await incrementPromoUsage(promo.code);
+        } catch (promoErr) {
+          console.warn('[checkout] promo usage:', promoErr);
+        }
       }
 
       addOrder({
@@ -159,8 +164,15 @@ export default function Checkout() {
       setDemoPaymentOpen(false);
       setSending(false);
 
-      // sendData закрывает Mini App и отправляет заказ боту
       if (tg.isAvailable) {
+        const notified = await notifyOrderCreated(orderId);
+
+        if (notified) {
+          tg.close();
+          return;
+        }
+
+        // Запасной путь: long-polling бот должен быть запущен
         tg.sendOrder(order);
         return;
       }
