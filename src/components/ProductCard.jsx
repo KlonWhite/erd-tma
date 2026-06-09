@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import PhotoPlaceholder from './PhotoPlaceholder.jsx';
 import Caps from './Caps.jsx';
 import useStore from '../store/useStore.js';
+import { getProductImage } from '../data/productImages.js';
 import tg from '../tg.js';
 
 export default function ProductCard({ product, index = 0 }) {
@@ -55,8 +56,8 @@ export default function ProductCard({ product, index = 0 }) {
         >
           {wishlisted ? '♥' : '♡'}
         </button>
-        {product.images ? (
-          <img src={product.images[0]} alt={product.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
+        {getProductImage(product) ? (
+          <img src={getProductImage(product)} alt={product.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
         ) : (
           <PhotoPlaceholder id={product.photoId} kind={product.photoKind} />
         )}

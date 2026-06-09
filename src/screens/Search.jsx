@@ -4,7 +4,7 @@ import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
 import Caps from '../components/Caps.jsx';
 import Rule from '../components/Rule.jsx';
 import BottomNav from '../components/BottomNav.jsx';
-import { PRODUCTS } from '../data/products.js';
+import { getCatalogProducts } from '../lib/catalog.js';
 import tg from '../tg.js';
 
 const RECENT = ['ХУДИ', 'ФУТБОЛКА', 'ЛОНГСЛИВ', 'ТРЕНЧ', 'ДЖИНСЫ'];
@@ -19,7 +19,7 @@ export default function Search() {
   const [query, setQuery] = useState('');
 
   const results = query.length >= 2
-    ? PRODUCTS.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+    ? getCatalogProducts().filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
     : [];
 
   return (

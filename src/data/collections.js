@@ -1,4 +1,4 @@
-import { PRODUCTS } from './products.js';
+import { getCatalogProducts, getProduct } from '../lib/catalog.js';
 
 export const COLLECTIONS = [
   {
@@ -42,6 +42,16 @@ export const COLLECTIONS = [
 export function getCollection(id) {
   const col = COLLECTIONS.find(c => c.id === id);
   if (!col) return null;
-  const products = col.productIds.map(pid => PRODUCTS.find(p => p.id === pid)).filter(Boolean);
+
+  let products = col.productIds.map(pid => getProduct(pid)).filter(Boolean);
+
+  if (!products.length) {
+    products = getCatalogProducts().filter(p => p.collection === id);
+  }
+
+  if (id === 'archive' && !products.length) {
+    products = getCatalogProducts().filter(p => p.archiveTag);
+  }
+
   return { ...col, products };
 }

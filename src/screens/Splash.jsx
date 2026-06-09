@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Wordmark from '../components/Wordmark.jsx';
 import Caps from '../components/Caps.jsx';
 import useStore from '../store/useStore.js';
+import tg from '../tg.js';
 
 export default function Splash() {
   const navigate = useNavigate();
@@ -16,7 +17,9 @@ export default function Splash() {
       bar.current.style.width = '100%';
     }
     const timer = setTimeout(() => {
-      navigate(onboardingDone ? '/home' : '/onboarding', { replace: true });
+      // Приветствие и меню — в чате с ботом (/start), не в Mini App
+      const skipOnboarding = tg.isAvailable || onboardingDone;
+      navigate(skipOnboarding ? '/home' : '/onboarding', { replace: true });
     }, 1600);
     return () => clearTimeout(timer);
   }, [navigate, onboardingDone]);

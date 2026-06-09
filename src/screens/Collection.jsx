@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getCollection } from '../data/collections.js';
+import useAdminStore from '../admin/adminStore.js';
 import Header from '../components/Header.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import Caps from '../components/Caps.jsx';
@@ -9,7 +10,8 @@ import tg from '../tg.js';
 
 export default function Collection() {
   const { id } = useParams();
-  const collection = useMemo(() => getCollection(id ?? 'homme'), [id]);
+  const catalogVersion = useAdminStore(s => s.catalogProducts.length + Number(s.initialized));
+  const collection = useMemo(() => getCollection(id ?? 'homme'), [id, catalogVersion]);
   const [activeFilter, setActiveFilter] = useState(null);
 
   useEffect(() => {

@@ -5,17 +5,36 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "bot": "node bot/index.js",
+    "bot:dev": "node --watch bot/index.js",
+    "bot:seed": "node bot/seed.js",
+    "bot:seed-support": "node bot/seedSupport.js",
+    "bot:seed-catalog": "node bot/seedCatalog.js",
+    "supabase": "supabase",
+    "db:login": "supabase login",
+    "db:link": "supabase link --project-ref dbiirtdoqfekecbrcbdy",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:status": "supabase migration list",
+    "vercel:deploy": "vercel --prod",
+    "vercel:preview": "vercel"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
+    "@telegram-apps/sdk-react": "^2.0.0",
+    "dotenv": "^16.6.1",
+    "grammy": "^1.43.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "zustand": "^5.0.2",
-    "@telegram-apps/sdk-react": "^2.0.0"
+    "ws": "^8.21.0",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "supabase": "^2.105.0",
+    "vercel": "^41.6.0",
     "vite": "^6.0.7"
   }
 }

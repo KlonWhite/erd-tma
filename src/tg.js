@@ -146,6 +146,51 @@ const tg = {
   applyTheme() {
     applyTelegramTheme();
   },
+
+  /**
+   * Запрос геолокации (Telegram LocationManager → браузер).
+   * @returns {Promise<{ lat: number, lng: number }>}
+   */
+  requestLocation() {
+    const app = tgApp;
+
+    return new Promise((resolve, reject) => {
+      if (app?.LocationManager) {
+        try {
+          app.LocationManager.init(() => {
+            if (!app.LocationManager.isLocationAvailable) {
+              this._browserLocation(resolve, reject);
+              return;
+            }
+            app.LocationManager.getLocation((loc) => {
+              if (loc?.latitude != null && loc?.longitude != null) {
+                resolve({ lat: loc.latitude, lng: loc.longitude });
+              } else {
+                this._browserLocation(resolve, reject);
+              }
+            });
+          });
+          return;
+        } catch {
+          this._browserLocation(resolve, reject);
+          return;
+        }
+      }
+      this._browserLocation(resolve, reject);
+    });
+  },
+
+  _browserLocation(resolve, reject) {
+    if (!navigator?.geolocation) {
+      reject(new Error('Геолокация недоступна'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  },
 };
 
 export default tg;

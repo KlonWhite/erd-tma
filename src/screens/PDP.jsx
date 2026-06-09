@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProduct } from '../data/products.js';
+import { getProduct } from '../lib/catalog.js';
+import useAdminStore from '../admin/adminStore.js';
 import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
 import Caps from '../components/Caps.jsx';
 import Rule from '../components/Rule.jsx';
@@ -10,7 +11,8 @@ import tg from '../tg.js';
 export default function PDP() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = getProduct(id ?? '');
+  const catalogVersion = useAdminStore(s => s.catalogProducts.length + Number(s.initialized));
+  const product = useMemo(() => getProduct(id ?? ''), [id, catalogVersion]);
   const addToCart = useStore(s => s.addToCart);
   const clearCart = useStore(s => s.clearCart);
   const toggleWishlist = useStore(s => s.toggleWishlist);

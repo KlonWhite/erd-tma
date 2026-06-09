@@ -564,7 +564,3 @@ export const PRODUCTS = [
     ],
   },
 ];
-
-export function getProduct(id) {
-  return PRODUCTS.find(p => p.id === id) ?? null;
-}

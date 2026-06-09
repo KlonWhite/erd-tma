@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { validatePromo } from '../utils/promo.js';
+import { getProduct } from '../lib/catalog.js';
+import { computeCartTotals, normalizeCart } from '../utils/cartTotals.js';
+
+function freshProduct(product) {
+  if (!product?.id) return product;
+  return getProduct(product.id) ?? product;
+}
 
 const DEMO_ORDERS = [
   { id: '#ERD-2261', date: '14 MAY 2026', total: '$4,580', status: 'IN TRANSIT' },
@@ -10,17 +18,31 @@ const DEMO_ORDERS = [
 const useStore = create(
   persist(
     (set, get) => ({
-      // ── Cart ──────────────────────────────────────────────
       cart: [],
 
       addToCart(product, size) {
         const { cart } = get();
-        const key = `${product.id}__${size}`;
+        const fresh = freshProduct(product);
+        const key = `${fresh.id}__${size}`;
         const existing = cart.find(i => i.key === key);
         if (existing) {
-          set({ cart: cart.map(i => i.key === key ? { ...i, qty: i.qty + 1 } : i) });
+          set({
+            cart: normalizeCart(cart.map(i => (
+              i.key === key
+                ? { ...i, qty: i.qty + 1, productId: fresh.id, product: fresh }
+                : i
+            ))),
+          });
         } else {
-          set({ cart: [...cart, { key, product, size, qty: 1 }] });
+          set({
+            cart: normalizeCart([...cart, {
+              key,
+              productId: fresh.id,
+              product: fresh,
+              size,
+              qty: 1,
+            }]),
+          });
         }
       },
 
@@ -31,25 +53,43 @@ const useStore = create(
       updateQty(key, delta) {
         const { cart } = get();
         set({
-          cart: cart
-            .map(i => i.key === key ? { ...i, qty: Math.max(0, i.qty + delta) } : i)
-            .filter(i => i.qty > 0),
+          cart: normalizeCart(
+            cart
+              .map(i => i.key === key ? { ...i, qty: Math.max(0, i.qty + delta) } : i)
+              .filter(i => i.qty > 0),
+          ),
         });
       },
 
       clearCart() {
-        set({ cart: [] });
+        set({ cart: [], promo: null, promoError: null });
       },
 
-      get cartCount() {
-        return get().cart.reduce((s, i) => s + i.qty, 0);
+      syncCartProducts() {
+        const { cart } = get();
+        if (!cart.length) return;
+        set({ cart: normalizeCart(cart) });
       },
 
-      get cartTotal() {
-        return get().cart.reduce((s, i) => s + i.product.price * i.qty, 0);
+      promo: null,
+      promoError: null,
+
+      async applyPromo(code) {
+        const { cart } = get();
+        const { subtotal } = computeCartTotals(cart, null);
+        const result = await validatePromo(code, subtotal);
+        if (!result.ok) {
+          set({ promo: null, promoError: result.error });
+          return false;
+        }
+        set({ promo: result.promo, promoError: null });
+        return true;
       },
 
-      // ── Wishlist ──────────────────────────────────────────
+      clearPromo() {
+        set({ promo: null, promoError: null });
+      },
+
       wishlist: [],
 
       toggleWishlist(productId) {
@@ -65,15 +105,22 @@ const useStore = create(
         return get().wishlist.includes(productId);
       },
 
-      // ── User ──────────────────────────────────────────────
       user: null,
       setUser(user) { set({ user }); },
 
-      // ── Onboarding ────────────────────────────────────────
       onboardingDone: false,
       setOnboardingDone() { set({ onboardingDone: true }); },
 
-      // ── Orders (persisted; seeded with demo rows) ─────────
+      delivery: {
+        address: '',
+        lat: null,
+        lng: null,
+      },
+
+      setDelivery(partial) {
+        set({ delivery: { ...get().delivery, ...partial } });
+      },
+
       orders: DEMO_ORDERS,
 
       addOrder(entry) {
@@ -82,11 +129,27 @@ const useStore = create(
     }),
     {
       name: 'erd-store',
+      version: 5,
+      migrate(persisted) {
+        if (persisted?.cart?.length) {
+          persisted.cart = normalizeCart(persisted.cart);
+        }
+        if (!persisted.delivery) {
+          persisted.delivery = { address: '', lat: null, lng: null };
+        }
+        return persisted;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state?.cart?.length) return;
+        state.cart = normalizeCart(state.cart);
+      },
       partialize: (state) => ({
-        cart: state.cart,
+        cart: state.cart.map(({ key, productId, size, qty }) => ({ key, productId, size, qty })),
         wishlist: state.wishlist,
         onboardingDone: state.onboardingDone,
         orders: state.orders,
+        promo: state.promo,
+        delivery: state.delivery,
       }),
     }
   )

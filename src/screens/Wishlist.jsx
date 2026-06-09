@@ -4,7 +4,7 @@ import Rule from '../components/Rule.jsx';
 import Caps from '../components/Caps.jsx';
 import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
 import BottomNav from '../components/BottomNav.jsx';
-import { PRODUCTS } from '../data/products.js';
+import { getProduct } from '../lib/catalog.js';
 import useStore from '../store/useStore.js';
 import tg from '../tg.js';
 
@@ -14,7 +14,7 @@ export default function Wishlist() {
   const toggleWishlist = useStore(s => s.toggleWishlist);
 
   const items = wishlist
-    .map(id => PRODUCTS.find(p => p.id === id))
+    .map(id => getProduct(id))
     .filter(Boolean);
 
   return (
