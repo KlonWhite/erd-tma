@@ -1,11 +1,41 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getShippingOption } from './shipping.js';
-import { incrementPromoUsageRpc, validatePromoCode } from './promo.js';
-import type { CreateOrderPayload, DbOrder, DbProduct, TelegramUser } from './types.js';
+import type { CreateOrderPayload, DbOrder, TelegramUser } from './types.js';
 
-function parseStock(stock: unknown): Record<string, number> {
-  if (!stock || typeof stock !== 'object') return {};
-  return stock as Record<string, number>;
+function mapRpcError(message: string): string {
+  return message
+    .replace(/^ERROR:\s*/i, '')
+    .replace(/\s*CONTEXT:.*$/s, '')
+    .trim();
+}
+
+/** Собирает JSON для RPC create_order (вся запись — одна транзакция в PostgreSQL). */
+function buildOrderRpcPayload(
+  payload: CreateOrderPayload,
+  tgUser: TelegramUser | null,
+) {
+  const shippingOption = getShippingOption(payload.shipping);
+
+  return {
+    orderId: payload.orderId,
+    items: (payload.items ?? [])
+      .filter((i) => i.productId && i.qty > 0)
+      .map((i) => ({
+        productId: i.productId,
+        size: i.size,
+        qty: i.qty,
+      })),
+    shipping: shippingOption.id,
+    promoCode: payload.promoCode ?? null,
+    address: payload.address ?? null,
+    coords: payload.coords ?? null,
+    customer: payload.customer ?? null,
+    delivery: payload.delivery ?? null,
+    payment: payload.payment ?? 'demo',
+    paymentDetail: payload.paymentDetail ?? null,
+    clientTelegramId: tgUser?.id ?? payload.customer?.telegramId ?? null,
+    clientName: payload.customer?.fullName ?? tgUser?.first_name ?? null,
+  };
 }
 
 export async function createOrderOnServer(
@@ -18,136 +48,19 @@ export async function createOrderOnServer(
     throw new Error('Корзина пуста');
   }
 
-  const productIds = [...new Set(items.map((i) => i.productId))];
-  const { data: products, error: productsError } = await supabase
-    .from('products')
-    .select('id, name, price, sizes, stock_by_size')
-    .in('id', productIds);
+  const p_payload = buildOrderRpcPayload(payload, tgUser);
 
-  if (productsError) throw productsError;
+  const { data, error } = await supabase.rpc('create_order', { p_payload });
 
-  const productMap = new Map<string, DbProduct>();
-  for (const row of products ?? []) {
-    productMap.set(row.id, row as DbProduct);
+  if (error) {
+    throw new Error(mapRpcError(error.message ?? 'Не удалось создать заказ'));
   }
 
-  let subtotal = 0;
-  const orderItems: Array<{
-    productId: string;
-    name: string;
-    size: string;
-    qty: number;
-    price: number;
-  }> = [];
-  const stockUpdates = new Map<string, Record<string, number>>();
-
-  for (const item of items) {
-    const product = productMap.get(item.productId);
-    if (!product) {
-      throw new Error(`Товар не найден: ${item.productId}`);
-    }
-
-    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
-    const size = item.size || product.sizes?.[0] || 'ONE SIZE';
-    const stock = parseStock(product.stock_by_size);
-    const available = stock[size] ?? 0;
-
-    if (available < qty) {
-      throw new Error(`Недостаточно товара «${product.name}» (${size})`);
-    }
-
-    const price = Number(product.price) || 0;
-    subtotal += price * qty;
-    orderItems.push({
-      productId: product.id,
-      name: product.name,
-      size,
-      qty,
-      price,
-    });
-
-    const nextStock = { ...stock, [size]: available - qty };
-    stockUpdates.set(product.id, nextStock);
+  if (!data) {
+    throw new Error('Не удалось создать заказ');
   }
 
-  let discount = 0;
-  let promoCode: string | null = null;
-
-  if (payload.promoCode) {
-    const promoResult = await validatePromoCode(supabase, payload.promoCode, subtotal);
-    if (!promoResult.ok) {
-      throw new Error(promoResult.error);
-    }
-    discount = promoResult.discount;
-    promoCode = promoResult.promo.code;
-  }
-
-  const shippingOption = getShippingOption(payload.shipping);
-  const shippingCost = shippingOption.price;
-  const total = Math.max(0, subtotal - discount) + shippingCost;
-
-  const publicId = payload.orderId || `#ERD-${Date.now().toString().slice(-5)}`;
-  const address = payload.address?.trim()
-    || payload.delivery?.address?.trim()
-    || (shippingOption.needsAddress ? '' : shippingOption.pickupAddress ?? '');
-
-  if (shippingOption.needsAddress && address.length < 5) {
-    throw new Error('Укажите адрес доставки');
-  }
-
-  const row = {
-    public_id: publicId,
-    client_telegram_id: tgUser?.id ?? payload.customer?.telegramId ?? null,
-    client_name: payload.customer?.fullName ?? tgUser?.first_name ?? null,
-    status: 'pending',
-    shipping: shippingOption.id,
-    address,
-    coords: payload.coords ?? null,
-    subtotal,
-    discount,
-    shipping_cost: shippingCost,
-    total,
-    currency: 'RUB',
-    promo_code: promoCode,
-    items_json: orderItems,
-    payment: payload.payment ?? 'demo',
-    customer: payload.customer ?? null,
-    delivery: payload.delivery ?? null,
-    shipping_detail: {
-      id: shippingOption.id,
-      name: shippingOption.name,
-      cost: shippingCost,
-    },
-    payment_detail: payload.paymentDetail ?? {
-      id: payload.payment ?? 'demo',
-      name: 'ДЕМО-ОПЛАТА',
-      status: 'paid',
-    },
-    notifications: [] as Array<Record<string, unknown>>,
-  };
-
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert(row)
-    .select('*')
-    .single();
-
-  if (orderError) throw orderError;
-
-  for (const [productId, stockBySize] of stockUpdates) {
-    const { error: stockError } = await supabase
-      .from('products')
-      .update({ stock_by_size: stockBySize })
-      .eq('id', productId);
-
-    if (stockError) throw stockError;
-  }
-
-  if (promoCode) {
-    await incrementPromoUsageRpc(supabase, promoCode);
-  }
-
-  return order as DbOrder;
+  return data as DbOrder;
 }
 
 export function wasOrderNotified(order: Pick<DbOrder, 'notifications'>): boolean {
