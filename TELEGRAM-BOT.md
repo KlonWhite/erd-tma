@@ -4,14 +4,20 @@
 >
 > Mini App открывается **только** по кнопке «🛍️ Открыть магазин» (и «⚙️ Админ-панель» для admin).
 
-## Два отдельных процесса
+## Два режима бота
+
+| Режим | Когда | Как |
+|-------|-------|-----|
+| **Webhook (прод)** | Деплой на Vercel | `npm run bot:webhook:set` после деплоя |
+| **Long polling (локально)** | Разработка | `npm run bot` / `npm run bot:dev` |
 
 | Компонент | Что делает | Как запустить |
 |-----------|------------|---------------|
-| **Telegram Bot** (`bot/`) | `/start`, регистрация в `clients`, Reply Keyboard, текстовые ответы | `npm run bot` |
+| **Telegram Bot** (`bot/`) | `/start`, регистрация в `clients`, Reply Keyboard, заказы, поддержка | webhook на Vercel или `npm run bot` локально |
 | **Mini App** (`src/`) | Каталог, корзина, оформление заказа | `npm run dev` / деплой |
+| **Serverless API** (`api/`) | Создание заказов, админка, уведомления | автоматически на Vercel |
 
-Бот и Mini App — **разные программы**. Без запущенного бота (`npm run bot`) команда `/start` в Telegram **не сработает**, даже если Mini App уже задеплоен.
+Уведомления о заказах идут через `/api/notify-order` — long-polling бот для checkout **не обязателен** на проде.
 
 ## Логика `/start`
 
@@ -86,10 +92,23 @@ npm run bot
 ### Переменные `.env`
 
 ```env
-BOT_TOKEN=123456:ABC...          # @BotFather
-WEBAPP_URL=https://...           # HTTPS URL Mini App
-ADMIN_TELEGRAM_IDS=123456789     # ваш Telegram ID для роли admin
+BOT_TOKEN=123456:ABC...               # @BotFather
+WEBAPP_URL=https://...                # HTTPS URL Mini App (и webhook)
+ADMIN_TELEGRAM_IDS=123456789          # ваш Telegram ID для роли admin
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...         # только сервер (бот + API), не в клиент!
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...            # только read каталога в Mini App
 ```
+
+### Webhook на Vercel
+
+```bash
+# после деплоя с BOT_TOKEN и WEBAPP_URL в env:
+npm run bot:webhook:set
+```
+
+Webhook URL: `{WEBAPP_URL}/api/telegram-webhook`
 
 Telegram ID можно узнать у [@userinfobot](https://t.me/userinfobot).
 
@@ -100,10 +119,11 @@ Telegram ID можно узнать у [@userinfobot](https://t.me/userinfobot).
 ### Настройка
 
 1. Создайте проект на [supabase.com](https://supabase.com).
-2. В **SQL Editor** выполните миграцию: `supabase/migrations/001_initial_schema.sql`.
+2. Примените миграции: `supabase/migrations/001_initial_schema.sql`, `002_storage.sql`, `003_secure_rls.sql`  
+   (или `npm run db:push` при связанном проекте).
 3. Скопируйте ключи из **Project Settings → API** в `.env`:
-   - `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` — для бота (`npm run bot`)
-   - `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` — для Mini App
+   - `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` — бот и Vercel API
+   - `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` — Mini App (только чтение каталога)
 4. Заполните каталог и промокоды:
 
 ```bash

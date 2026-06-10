@@ -6,7 +6,6 @@ import CTA from '../components/CTA.jsx';
 import DeliveryAddressForm from '../components/DeliveryAddressForm.jsx';
 import DemoPaymentSheet from '../components/DemoPaymentSheet.jsx';
 import useStore from '../store/useStore.js';
-import { incrementPromoUsage } from '../utils/promo.js';
 import { computeCartTotals } from '../utils/cartTotals.js';
 import { getProduct } from '../lib/catalog.js';
 import {
@@ -14,11 +13,9 @@ import {
   getShippingOption,
   shippingNeedsAddress,
 } from '../utils/checkout.js';
-import { createOrderFromCheckout } from '../lib/ordersDb.js';
+import { createOrderViaApi } from '../lib/ordersApi.js';
 import { notifyOrderCreated } from '../lib/notifyOrder.js';
-import { isSupabaseConfigured } from '../lib/supabase.js';
 import tg from '../tg.js';
-
 const fmt = (n) => (Number(n) || 0).toLocaleString('ru-RU');
 
 function buildSteps(shippingId) {
@@ -140,24 +137,14 @@ export default function Checkout() {
     }).toUpperCase();
 
     try {
-      if (!isSupabaseConfigured()) {
-        throw new Error('Supabase не настроен');
-      }
-
-      await createOrderFromCheckout(order, tgUser);
-
-      if (promo?.code) {
-        try {
-          await incrementPromoUsage(promo.code);
-        } catch (promoErr) {
-          console.warn('[checkout] promo usage:', promoErr);
-        }
-      }
+      const created = await createOrderViaApi(order);
+      const finalTotal = Number(created?.total) || orderTotal;
+      const finalOrderId = created?.publicId || orderId;
 
       addOrder({
-        id: orderId,
+        id: finalOrderId,
         date: dateStr,
-        total: `${fmt(orderTotal)} ₽`,
+        total: `${fmt(finalTotal)} ₽`,
         status: 'ОПЛАЧЕН',
       });
       clearCart();
@@ -165,7 +152,7 @@ export default function Checkout() {
       setSending(false);
 
       if (tg.isAvailable) {
-        const notified = await notifyOrderCreated(orderId);
+        const notified = await notifyOrderCreated(finalOrderId);
 
         if (notified) {
           tg.close();

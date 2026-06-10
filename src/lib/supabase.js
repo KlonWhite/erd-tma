@@ -1,15 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-/** Env из Vercel / .env; fallback — публичные ключи проекта (anon/publishable). */
-const url = (
-  import.meta.env.VITE_SUPABASE_URL
-  || 'https://dbiirtdoqfekecbrcbdy.supabase.co'
-).trim();
-
-const anonKey = (
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-  || 'sb_publishable_T8vNqxdqODKRySRMGd8BXg_S0dTrVoo'
-).trim();
+/** Env из Vercel / .env — только публичный anon key (read-only каталог). */
+const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
 let client;
 

@@ -1,8 +1,10 @@
 node_modules
 dist
+shared/dist
 .DS_Store
 .env
 .env.local
+.env.vercel
 .vercel
 bot/data/*.sqlite
 bot/data/*.sqlite-*

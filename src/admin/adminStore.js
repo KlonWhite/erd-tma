@@ -5,20 +5,16 @@ import { formatPromoLabel } from './promoRegistry.js';
 import tg from '../tg.js';
 import { isSupabaseConfigured } from '../lib/supabase.js';
 import {
-  deleteCategory as deleteCategoryDb,
-  deleteProduct as deleteProductDb,
-  fetchCategories,
-  fetchProducts,
-  upsertCategory,
-  upsertProduct,
-} from '../lib/catalogDb.js';
-import { fetchAdminOrders, updateOrderInDb } from '../lib/ordersDb.js';
-import {
-  deletePromo as deletePromoDb,
-  fetchPromos,
-  seedDefaultPromosIfEmpty,
-  upsertPromo,
-} from '../lib/promosDb.js';
+  adminBootstrap,
+  adminDeleteCategory,
+  adminDeleteProduct,
+  adminDeletePromo,
+  adminUpdateOrder,
+  adminUpsertCategory,
+  adminUpsertProduct,
+  adminUpsertPromo,
+} from '../lib/adminApi.js';
+import { fetchCategories, fetchProducts } from '../lib/catalogDb.js';
 
 function uid(prefix = 'id') {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -63,11 +59,23 @@ const useAdminStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const [products, categories, orders, promos] = await Promise.all([
+      if (tg.isAvailable && tg.app?.initData) {
+        const data = await adminBootstrap();
+        set({
+          initialized: true,
+          loading: false,
+          catalogProducts: data.products?.length ? data.products : PRODUCTS.map(normalizeProduct),
+          categories: data.categories?.length ? data.categories : DEFAULT_CATEGORIES,
+          adminOrders: data.orders ?? [],
+          promos: data.promos ?? [],
+          error: null,
+        });
+        return;
+      }
+
+      const [products, categories] = await Promise.all([
         fetchProducts(),
         fetchCategories(),
-        fetchAdminOrders(),
-        seedDefaultPromosIfEmpty(),
       ]);
 
       set({
@@ -75,9 +83,9 @@ const useAdminStore = create((set, get) => ({
         loading: false,
         catalogProducts: products.length ? products : PRODUCTS.map(normalizeProduct),
         categories: categories.length ? categories : DEFAULT_CATEGORIES,
-        adminOrders: orders,
-        promos,
-        error: null,
+        adminOrders: [],
+        promos: [],
+        error: 'Откройте админку из Telegram для полного доступа',
       });
     } catch (err) {
       console.error('[adminStore] bootstrap:', err);
@@ -151,15 +159,15 @@ const useAdminStore = create((set, get) => ({
 
     set({ adminOrders: orders });
 
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && tg.app?.initData) {
       const target = orders.find(o => o.id === orderId);
       try {
-        const updated = await updateOrderInDb(orderId, {
+        const result = await adminUpdateOrder(orderId, {
           status,
           notifications: target?.notifications,
         });
         set({
-          adminOrders: get().adminOrders.map(o => (o.id === orderId ? updated : o)),
+          adminOrders: get().adminOrders.map(o => (o.id === orderId ? result.order : o)),
         });
       } catch (err) {
         console.error('[adminStore] updateOrderStatus:', err);
@@ -184,11 +192,11 @@ const useAdminStore = create((set, get) => ({
       }),
     });
 
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && tg.app?.initData) {
       try {
-        const updated = await updateOrderInDb(orderId, patch);
+        const result = await adminUpdateOrder(orderId, patch);
         set({
-          adminOrders: get().adminOrders.map(o => (o.id === orderId ? updated : o)),
+          adminOrders: get().adminOrders.map(o => (o.id === orderId ? result.order : o)),
         });
       } catch (err) {
         console.error('[adminStore] updateOrder:', err);
@@ -204,10 +212,10 @@ const useAdminStore = create((set, get) => ({
     const id = data.id ?? uid('p');
     const product = normalizeProduct({ ...data, id });
     set({ catalogProducts: [...get().catalogProducts, product] });
-    if (isSupabaseConfigured()) {
-      const saved = await upsertProduct(product);
+    if (isSupabaseConfigured() && tg.app?.initData) {
+      const result = await adminUpsertProduct(product);
       set({
-        catalogProducts: get().catalogProducts.map(p => (p.id === id ? saved : p)),
+        catalogProducts: get().catalogProducts.map(p => (p.id === id ? result.product : p)),
       });
     }
     return product;
@@ -222,17 +230,17 @@ const useAdminStore = create((set, get) => ({
     set({
       catalogProducts: get().catalogProducts.map(p => (p.id === id ? product : p)),
     });
-    if (isSupabaseConfigured()) {
-      const saved = await upsertProduct(product);
+    if (isSupabaseConfigured() && tg.app?.initData) {
+      const result = await adminUpsertProduct(product);
       set({
-        catalogProducts: get().catalogProducts.map(p => (p.id === id ? saved : p)),
+        catalogProducts: get().catalogProducts.map(p => (p.id === id ? result.product : p)),
       });
     }
   },
 
   async deleteProduct(id) {
     set({ catalogProducts: get().catalogProducts.filter(p => p.id !== id) });
-    if (isSupabaseConfigured()) await deleteProductDb(id);
+    if (isSupabaseConfigured() && tg.app?.initData) await adminDeleteProduct(id);
   },
 
   updateProductStock(id, stockBySize) {
@@ -242,10 +250,10 @@ const useAdminStore = create((set, get) => ({
   async addCategory({ name, slug }) {
     const cat = { id: uid('cat'), name, slug: slug || name.toLowerCase().replace(/\s+/g, '-') };
     set({ categories: [...get().categories, cat] });
-    if (isSupabaseConfigured()) {
-      const saved = await upsertCategory(cat);
+    if (isSupabaseConfigured() && tg.app?.initData) {
+      const result = await adminUpsertCategory(cat);
       set({
-        categories: get().categories.map(c => (c.id === cat.id ? saved : c)),
+        categories: get().categories.map(c => (c.id === cat.id ? result.category : c)),
       });
     }
     return cat;
@@ -255,12 +263,14 @@ const useAdminStore = create((set, get) => ({
     const next = get().categories.map(c => (c.id === id ? { ...c, ...data } : c));
     set({ categories: next });
     const cat = next.find(c => c.id === id);
-    if (isSupabaseConfigured() && cat) await upsertCategory(cat);
+    if (isSupabaseConfigured() && tg.app?.initData && cat) {
+      await adminUpsertCategory(cat);
+    }
   },
 
   async deleteCategory(id) {
     set({ categories: get().categories.filter(c => c.id !== id) });
-    if (isSupabaseConfigured()) await deleteCategoryDb(id);
+    if (isSupabaseConfigured() && tg.app?.initData) await adminDeleteCategory(id);
   },
 
   async addPromo(data) {
@@ -282,9 +292,9 @@ const useAdminStore = create((set, get) => ({
       active: data.active !== false,
     };
     set({ promos: [...get().promos, promo] });
-    if (isSupabaseConfigured()) {
-      const saved = await upsertPromo(promo);
-      set({ promos: get().promos.map(p => (p.id === promo.id ? saved : p)) });
+    if (isSupabaseConfigured() && tg.app?.initData) {
+      const result = await adminUpsertPromo(promo);
+      set({ promos: get().promos.map(p => (p.id === promo.id ? result.promo : p)) });
     }
     return promo;
   },
@@ -308,18 +318,18 @@ const useAdminStore = create((set, get) => ({
       return next;
     });
     set({ promos });
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && tg.app?.initData) {
       const promo = promos.find(p => p.id === id);
       if (promo) {
-        const saved = await upsertPromo(promo);
-        set({ promos: get().promos.map(p => (p.id === id ? saved : p)) });
+        const result = await adminUpsertPromo(promo);
+        set({ promos: get().promos.map(p => (p.id === id ? result.promo : p)) });
       }
     }
   },
 
   async deletePromo(id) {
     set({ promos: get().promos.filter(p => p.id !== id) });
-    if (isSupabaseConfigured()) await deletePromoDb(id);
+    if (isSupabaseConfigured() && tg.app?.initData) await adminDeletePromo(id);
   },
 }));
 

@@ -86,7 +86,7 @@ export async function fetchAdminOrders() {
   return (data ?? []).map(rowToAdminOrder);
 }
 
-/** Создание заказа из Mini App при оформлении */
+/** @deprecated Используйте createOrderViaApi из ordersApi.js */
 export async function createOrderFromCheckout(payload, tgUser) {
   const publicId = payload.orderId || `#ERD-${Date.now().toString().slice(-5)}`;
   const items = payload.items ?? [];

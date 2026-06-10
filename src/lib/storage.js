@@ -1,4 +1,5 @@
-import { getSupabase } from './supabase.js';
+import { adminUploadImage } from './adminApi.js';
+import tg from '../tg.js';
 
 export const PRODUCT_IMAGES_BUCKET = 'product-images';
 
@@ -10,16 +11,10 @@ export function getStoragePublicUrl(path) {
 }
 
 export async function uploadProductImage(file, productId) {
-  const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
-  const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
-
-  const { error } = await getSupabase()
-    .storage
-    .from(PRODUCT_IMAGES_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type || undefined });
-
-  if (error) throw error;
-  return getStoragePublicUrl(path);
+  if (tg.app?.initData) {
+    return adminUploadImage(file, productId);
+  }
+  throw new Error('Загрузка изображений доступна только из админ-панели в Telegram');
 }
 
 export async function uploadProductImages(files, productId) {

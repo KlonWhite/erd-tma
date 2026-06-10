@@ -1,20 +1,8 @@
-import {
-  findPromoRecord,
-  formatPromoLabel,
-  getPromoUsageCount,
-  incrementPromoUsage,
-  isPromoExpired,
-  loadPromos,
-  promosToMap,
-} from '../admin/promoRegistry.js';
-
-export { incrementPromoUsage };
+import { formatPromoLabel } from '../admin/promoRegistry.js';
+import { validatePromoViaApi } from '../lib/promoApi.js';
+import { isSupabaseConfigured } from '../lib/supabase.js';
 
 /** @typedef {{ code: string, type: 'percent' | 'fixed', value: number, label: string, minSubtotal?: number, maxUses?: number, expiresAt?: string }} Promo */
-
-export function getPromoCodesMap() {
-  return promosToMap(loadPromos());
-}
 
 /**
  * @param {string} code
@@ -22,44 +10,24 @@ export function getPromoCodesMap() {
  * @returns {Promise<{ ok: true, promo: Promo } | { ok: false, error: string }>}
  */
 export async function validatePromo(code, subtotal) {
-  const key = code.trim().toUpperCase();
-  if (!key) return { ok: false, error: 'Введите промокод' };
-
-  const record = findPromoRecord(key);
-  if (!record) return { ok: false, error: 'Промокод не найден' };
-  if (!record.active) return { ok: false, error: 'Промокод недоступен' };
-
-  if (isPromoExpired(record.expiresAt)) {
-    return { ok: false, error: 'Срок действия промокода истёк' };
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: 'Промокоды недоступны без Supabase' };
   }
 
-  const used = await getPromoUsageCount(key);
-  if (record.maxUses != null && used >= record.maxUses) {
-    return { ok: false, error: 'Лимит использований исчерпан' };
-  }
+  const result = await validatePromoViaApi(code, subtotal);
+  if (!result.ok) return result;
 
-  const raw = promosToMap(loadPromos())[key];
-  if (!raw) {
-    return { ok: false, error: 'Промокод недоступен' };
-  }
-
-  if (raw.minSubtotal != null && subtotal < raw.minSubtotal) {
-    return {
-      ok: false,
-      error: `Минимальная сумма заказа ${raw.minSubtotal.toLocaleString('ru-RU')} ₽`,
-    };
-  }
-
+  const promo = result.promo;
   return {
     ok: true,
     promo: {
-      code: key,
-      type: record.type,
-      value: record.value,
-      label: record.label || formatPromoLabel(record),
-      minSubtotal: record.minSubtotal ?? undefined,
-      maxUses: record.maxUses ?? undefined,
-      expiresAt: record.expiresAt ?? undefined,
+      code: promo.code,
+      type: promo.type,
+      value: promo.value,
+      label: promo.label || formatPromoLabel(promo),
+      minSubtotal: promo.minSubtotal ?? undefined,
+      maxUses: promo.maxUses ?? undefined,
+      expiresAt: promo.expiresAt ?? undefined,
     },
   };
 }
