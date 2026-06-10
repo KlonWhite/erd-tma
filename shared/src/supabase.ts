@@ -12,6 +12,8 @@ export function getServiceRoleKey(): string {
   return (
     process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
     || process.env.SUPABASE_SECRET_KEY?.trim()
+    // Fallback: publishable/anon key (пока service_role не добавлен в Vercel)
+    || process.env.VITE_SUPABASE_ANON_KEY?.trim()
     || ''
   );
 }

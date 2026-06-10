@@ -26,8 +26,9 @@ export function assertConfig(): void {
   required('WEBAPP_URL');
   required('SUPABASE_URL');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-    || process.env.SUPABASE_SECRET_KEY?.trim();
+    || process.env.SUPABASE_SECRET_KEY?.trim()
+    || process.env.VITE_SUPABASE_ANON_KEY?.trim();
   if (!key) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY');
   }
 }

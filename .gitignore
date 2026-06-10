@@ -5,6 +5,7 @@ shared/dist
 .env
 .env.local
 .env.vercel
+.env.vercel.pulled
 .vercel
 bot/data/*.sqlite
 bot/data/*.sqlite-*
