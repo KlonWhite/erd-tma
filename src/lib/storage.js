@@ -1,5 +1,6 @@
 import { adminUploadImage } from './adminApi.js';
 import tg from '../tg.js';
+import { isTelegramMiniApp } from './telegramInitData.js';
 
 export const PRODUCT_IMAGES_BUCKET = 'product-images';
 
@@ -11,7 +12,7 @@ export function getStoragePublicUrl(path) {
 }
 
 export async function uploadProductImage(file, productId) {
-  if (tg.app?.initData) {
+  if (isTelegramMiniApp()) {
     return adminUploadImage(file, productId);
   }
   throw new Error('Загрузка изображений доступна только из админ-панели в Telegram');

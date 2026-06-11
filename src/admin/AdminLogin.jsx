@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Caps from '../components/Caps.jsx';
 import CTA from '../components/CTA.jsx';
 import { verifyAdminAccess } from '../lib/adminApi.js';
-import tg from '../tg.js';
+import { isTelegramMiniApp, waitForTelegramInitData } from '../lib/telegramInitData.js';
 
 const AUTH_KEY = 'erd-admin-auth';
 
@@ -25,8 +25,9 @@ export default function AdminLogin() {
     let cancelled = false;
 
     async function check() {
-      if (!tg.isAvailable) {
-        setError('Откройте админ-панель из Telegram Mini App');
+      await waitForTelegramInitData(3000);
+      if (!isTelegramMiniApp()) {
+        setError('Откройте админку кнопкой «⚙️ Админ-панель» в боте @klonwhite_bot');
         setChecking(false);
         return;
       }

@@ -85,8 +85,7 @@ export default function PDP() {
 
   const shareProduct = () => {
     tg.haptic.selection();
-    const base = window.location.href.replace(/#.*$/, '');
-    const url = `${base}#/product/${product.id}`;
+    const url = new URL(`/product/${product.id}`, window.location.origin).href;
     tg.shareLink(url, product.name);
   };
 

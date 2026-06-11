@@ -2,14 +2,18 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createBot } from '../bot/bot.js';
 import { assertConfig } from '../bot/config.js';
 
-let bot: ReturnType<typeof createBot> | null = null;
+let botInit: Promise<ReturnType<typeof createBot>> | null = null;
 
 function getBot() {
-  if (!bot) {
-    assertConfig();
-    bot = createBot();
+  if (!botInit) {
+    botInit = (async () => {
+      assertConfig();
+      const instance = createBot();
+      await instance.init();
+      return instance;
+    })();
   }
-  return bot;
+  return botInit;
 }
 
 export default async function telegramWebhook(req: VercelRequest, res: VercelResponse) {
@@ -24,7 +28,8 @@ export default async function telegramWebhook(req: VercelRequest, res: VercelRes
   }
 
   try {
-    await getBot().handleUpdate(req.body);
+    const bot = await getBot();
+    await bot.handleUpdate(req.body);
     res.status(200).end('ok');
   } catch (err) {
     console.error('[telegram-webhook]', err);

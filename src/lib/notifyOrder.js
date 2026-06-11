@@ -1,8 +1,8 @@
-import tg from '../tg.js';
+import { getTelegramInitData, waitForTelegramInitData } from './telegramInitData.js';
 
 /** Уведомление в Telegram через Vercel API (не требует запущенного long-polling бота). */
 export async function notifyOrderCreated(publicId) {
-  const initData = tg.app?.initData;
+  const initData = getTelegramInitData() || await waitForTelegramInitData();
   if (!initData || !publicId) return false;
 
   try {

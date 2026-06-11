@@ -1,9 +1,12 @@
-import tg from '../tg.js';
+import {
+  getTelegramInitData,
+  waitForTelegramInitData,
+} from './telegramInitData.js';
 
-function getInitData() {
-  const initData = tg.app?.initData;
+async function getInitData() {
+  const initData = getTelegramInitData() || await waitForTelegramInitData();
   if (!initData) {
-    throw new Error('Откройте админ-панель из Telegram');
+    throw new Error('Откройте админ-панель кнопкой «⚙️ Админ-панель» в боте');
   }
   return initData;
 }
@@ -12,7 +15,7 @@ async function adminRequest(action, data = {}) {
   const res = await fetch('/api/admin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, initData: getInitData(), data }),
+    body: JSON.stringify({ action, initData: await getInitData(), data }),
   });
 
   const payload = await res.json().catch(() => ({}));
@@ -23,9 +26,13 @@ async function adminRequest(action, data = {}) {
 }
 
 export async function verifyAdminAccess() {
-  const initData = tg.app?.initData;
+  const initData = getTelegramInitData() || await waitForTelegramInitData();
   if (!initData) {
-    return { ok: false, isAdmin: false, error: 'Нет Telegram initData' };
+    return {
+      ok: false,
+      isAdmin: false,
+      error: 'Откройте админку кнопкой «⚙️ Админ-панель» в боте @klonwhite_bot (не из браузера)',
+    };
   }
 
   const res = await fetch('/api/admin', {

@@ -59,7 +59,7 @@ const useAdminStore = create((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      if (tg.isAvailable && tg.app?.initData) {
+      if (tg.isMiniApp) {
         const data = await adminBootstrap();
         set({
           initialized: true,
@@ -159,7 +159,7 @@ const useAdminStore = create((set, get) => ({
 
     set({ adminOrders: orders });
 
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const target = orders.find(o => o.id === orderId);
       try {
         const result = await adminUpdateOrder(orderId, {
@@ -192,7 +192,7 @@ const useAdminStore = create((set, get) => ({
       }),
     });
 
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       try {
         const result = await adminUpdateOrder(orderId, patch);
         set({
@@ -212,7 +212,7 @@ const useAdminStore = create((set, get) => ({
     const id = data.id ?? uid('p');
     const product = normalizeProduct({ ...data, id });
     set({ catalogProducts: [...get().catalogProducts, product] });
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const result = await adminUpsertProduct(product);
       set({
         catalogProducts: get().catalogProducts.map(p => (p.id === id ? result.product : p)),
@@ -230,7 +230,7 @@ const useAdminStore = create((set, get) => ({
     set({
       catalogProducts: get().catalogProducts.map(p => (p.id === id ? product : p)),
     });
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const result = await adminUpsertProduct(product);
       set({
         catalogProducts: get().catalogProducts.map(p => (p.id === id ? result.product : p)),
@@ -240,7 +240,7 @@ const useAdminStore = create((set, get) => ({
 
   async deleteProduct(id) {
     set({ catalogProducts: get().catalogProducts.filter(p => p.id !== id) });
-    if (isSupabaseConfigured() && tg.app?.initData) await adminDeleteProduct(id);
+    if (isSupabaseConfigured() && tg.isMiniApp) await adminDeleteProduct(id);
   },
 
   updateProductStock(id, stockBySize) {
@@ -250,7 +250,7 @@ const useAdminStore = create((set, get) => ({
   async addCategory({ name, slug }) {
     const cat = { id: uid('cat'), name, slug: slug || name.toLowerCase().replace(/\s+/g, '-') };
     set({ categories: [...get().categories, cat] });
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const result = await adminUpsertCategory(cat);
       set({
         categories: get().categories.map(c => (c.id === cat.id ? result.category : c)),
@@ -263,14 +263,14 @@ const useAdminStore = create((set, get) => ({
     const next = get().categories.map(c => (c.id === id ? { ...c, ...data } : c));
     set({ categories: next });
     const cat = next.find(c => c.id === id);
-    if (isSupabaseConfigured() && tg.app?.initData && cat) {
+    if (isSupabaseConfigured() && tg.isMiniApp && cat) {
       await adminUpsertCategory(cat);
     }
   },
 
   async deleteCategory(id) {
     set({ categories: get().categories.filter(c => c.id !== id) });
-    if (isSupabaseConfigured() && tg.app?.initData) await adminDeleteCategory(id);
+    if (isSupabaseConfigured() && tg.isMiniApp) await adminDeleteCategory(id);
   },
 
   async addPromo(data) {
@@ -292,7 +292,7 @@ const useAdminStore = create((set, get) => ({
       active: data.active !== false,
     };
     set({ promos: [...get().promos, promo] });
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const result = await adminUpsertPromo(promo);
       set({ promos: get().promos.map(p => (p.id === promo.id ? result.promo : p)) });
     }
@@ -318,7 +318,7 @@ const useAdminStore = create((set, get) => ({
       return next;
     });
     set({ promos });
-    if (isSupabaseConfigured() && tg.app?.initData) {
+    if (isSupabaseConfigured() && tg.isMiniApp) {
       const promo = promos.find(p => p.id === id);
       if (promo) {
         const result = await adminUpsertPromo(promo);
@@ -329,7 +329,7 @@ const useAdminStore = create((set, get) => ({
 
   async deletePromo(id) {
     set({ promos: get().promos.filter(p => p.id !== id) });
-    if (isSupabaseConfigured() && tg.app?.initData) await adminDeletePromo(id);
+    if (isSupabaseConfigured() && tg.isMiniApp) await adminDeletePromo(id);
   },
 }));
 

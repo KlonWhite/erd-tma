@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import Splash from './screens/Splash.jsx';
 import Onboarding from './screens/Onboarding.jsx';
@@ -18,7 +18,7 @@ const shell = { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <div style={shell}>
         <Routes>
           <Route path="/admin/*" element={<AdminApp />} />
@@ -37,6 +37,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-    </HashRouter>
+    </BrowserRouter>
   );
 }

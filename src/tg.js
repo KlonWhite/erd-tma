@@ -174,9 +174,16 @@ const tg = {
     tgApp?.close();
   },
 
-  // Check if running inside Telegram
+  // Telegram WebApp API доступен (в браузере тоже есть stub без initData)
   get isAvailable() {
     return !!tgApp;
+  },
+
+  /** Реальный запуск Mini App с пользователем Telegram */
+  get isMiniApp() {
+    const initData = tgApp?.initData;
+    if (typeof initData === 'string' && initData.length > 0) return true;
+    return Boolean(tgApp?.initDataUnsafe?.user?.id);
   },
 
   applyTheme() {

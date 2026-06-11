@@ -19,6 +19,7 @@
     "db:login": "supabase login",
     "db:link": "supabase link --project-ref dbiirtdoqfekecbrcbdy",
     "db:push": "supabase db push",
+    "db:apply": "supabase db query --linked -f",
     "db:pull": "supabase db pull",
     "db:status": "supabase migration list",
     "vercel:login": "vercel login",

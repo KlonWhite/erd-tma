@@ -1,8 +1,8 @@
-import tg from '../tg.js';
+import { getTelegramInitData, waitForTelegramInitData } from './telegramInitData.js';
 
 /** Создание заказа через серверный API (валидация цен, стока, промо). */
 export async function createOrderViaApi(order) {
-  const initData = tg.app?.initData;
+  const initData = getTelegramInitData() || await waitForTelegramInitData();
   if (!initData) {
     throw new Error('Откройте магазин из Telegram для оформления заказа');
   }

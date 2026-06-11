@@ -12,7 +12,7 @@ export const BOT_TOKEN = process.env.BOT_TOKEN?.trim() || '';
 export const WEBAPP_URL = (process.env.WEBAPP_URL || process.env.VITE_WEBAPP_URL || '')
   .trim()
   .replace(/\/$/, '');
-export const ADMIN_URL = `${WEBAPP_URL}/#/admin`;
+export const ADMIN_URL = `${WEBAPP_URL}/admin`;
 
 export const ADMIN_TELEGRAM_IDS = (process.env.ADMIN_TELEGRAM_IDS || '')
   .split(',')
