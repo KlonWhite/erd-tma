@@ -1,14 +1,86 @@
+import { useEffect, useMemo, useState } from 'react';
 import Header from '../components/Header.jsx';
 import Rule from '../components/Rule.jsx';
 import Caps from '../components/Caps.jsx';
 import BottomNav from '../components/BottomNav.jsx';
 import useStore from '../store/useStore.js';
+import { fetchMyOrders } from '../lib/accountApi.js';
 import tg from '../tg.js';
+
+const STATUS_META = {
+  pending: { label: 'НОВЫЙ', color: 'var(--erd-ox)' },
+  processing: { label: 'В ОБРАБОТКЕ', color: 'var(--erd-ox)' },
+  shipped: { label: 'ОТПРАВЛЕН', color: '#1a5a8a' },
+  delivered: { label: 'ДОСТАВЛЕН', color: 'var(--erd-muted)' },
+  cancelled: { label: 'ОТМЕНЁН', color: 'var(--erd-muted)' },
+};
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).toUpperCase();
+}
+
+function normalizeOrder(order) {
+  const status = STATUS_META[order.status] ?? {
+    label: order.status ?? 'НОВЫЙ',
+    color: 'var(--erd-muted)',
+  };
+
+  return {
+    id: order.id,
+    date: formatDate(order.createdAt ?? order.date),
+    total: order.totalAmount != null
+      ? `${Number(order.totalAmount).toLocaleString('ru-RU')} ₽`
+      : order.total,
+    statusLabel: status.label,
+    statusColor: status.color,
+    items: order.items ?? [],
+    notifications: order.notifications ?? [],
+  };
+}
 
 export default function Account() {
   const name = tg.userName || 'MEMBER';
-  const orders = useStore(s => s.orders);
+  const localOrders = useStore(s => s.orders);
   const wishlist = useStore(s => s.wishlist);
+  const [serverOrders, setServerOrders] = useState(null);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOrders() {
+      if (!tg.isMiniApp) return;
+      setLoadingOrders(true);
+      setOrdersError('');
+      try {
+        const orders = await fetchMyOrders();
+        if (!cancelled) setServerOrders(orders);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[account] orders:', err);
+          setOrdersError(err.message ?? 'Не удалось загрузить заказы');
+        }
+      } finally {
+        if (!cancelled) setLoadingOrders(false);
+      }
+    }
+
+    loadOrders();
+    return () => { cancelled = true; };
+  }, []);
+
+  const orders = useMemo(
+    () => (serverOrders ?? localOrders).map(normalizeOrder),
+    [serverOrders, localOrders],
+  );
 
   const STATS = [
     ['ЗАКАЗЫ', String(orders.length)],
@@ -63,8 +135,25 @@ export default function Account() {
           justifyContent: 'space-between',
         }}>
           <Caps size={10} weight={800}>ПОСЛЕДНИЕ ЗАКАЗЫ</Caps>
-          <Caps size={10} weight={700} color="var(--erd-muted)">ВСЕ →</Caps>
+          <Caps size={10} weight={700} color="var(--erd-muted)">
+            {loadingOrders ? 'ЗАГРУЗКА…' : 'ВСЕ →'}
+          </Caps>
         </div>
+
+        {ordersError && (
+          <div style={{ padding: '0 18px 12px' }}>
+            <Caps size={9} weight={700} color="var(--erd-ox)">{ordersError}</Caps>
+          </div>
+        )}
+
+        {orders.length === 0 && !loadingOrders && (
+          <div style={{ padding: '28px 18px', borderTop: '1px solid var(--erd-rule)' }}>
+            <Caps size={11} weight={800}>ЗАКАЗОВ ПОКА НЕТ</Caps>
+            <Caps size={9} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 8, lineHeight: 1.5 }}>
+              Оформите первый заказ — история появится здесь автоматически.
+            </Caps>
+          </div>
+        )}
 
         {orders.map(o => (
           <div key={o.id} style={{
@@ -73,8 +162,8 @@ export default function Account() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <Caps size={11} weight={800}>{o.id}</Caps>
-              <Caps size={9} weight={700} color={o.status === 'В ПУТИ' || o.status === 'В ОБРАБОТКЕ' ? 'var(--erd-ox)' : 'var(--erd-muted)'}>
-                {o.status}
+              <Caps size={9} weight={700} color={o.statusColor}>
+                {o.statusLabel}
               </Caps>
             </div>
             <div style={{
@@ -86,6 +175,17 @@ export default function Account() {
               <Caps size={9} weight={700} color="var(--erd-muted)">{o.date}</Caps>
               <Caps size={12} weight={800}>{o.total}</Caps>
             </div>
+            {o.items.length > 0 && (
+              <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 8, lineHeight: 1.5 }}>
+                {o.items.slice(0, 2).map(item => `${item.name} · ${item.size} ×${item.qty}`).join(' / ')}
+                {o.items.length > 2 ? ` / +${o.items.length - 2}` : ''}
+              </Caps>
+            )}
+            {o.notifications.length > 0 && (
+              <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 6, lineHeight: 1.5 }}>
+                ПОСЛЕДНЕЕ: {o.notifications[o.notifications.length - 1]?.message}
+              </Caps>
+            )}
           </div>
         ))}
 

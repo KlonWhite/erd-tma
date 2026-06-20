@@ -140,13 +140,6 @@ const useAdminStore = create((set, get) => ({
         at: new Date().toISOString(),
         message: `Статус заказа ${orderId} изменён на «${label}»`,
       };
-      tg.sendOrder({
-        type: 'erd_status_notify',
-        orderId,
-        status,
-        customer: o.customer,
-        message: notification.message,
-      });
       if (import.meta.env.DEV) {
         console.log('[ADMIN] Уведомление клиенту:', notification.message);
       }

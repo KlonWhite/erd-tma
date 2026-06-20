@@ -12,8 +12,10 @@ import {
   productToRow,
   promoToRow,
   rowToAdminOrder,
+  toAdminStatus,
   toBotStatus,
 } from './_lib/adminMappers.js';
+import { sendTelegramMessage } from '../shared/dist/index.js';
 import {
   badRequest,
   getBotToken,
@@ -27,6 +29,38 @@ interface AdminBody {
   action: string;
   initData: string;
   data?: Record<string, unknown>;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'НОВЫЙ',
+  processing: 'В ОБРАБОТКЕ',
+  shipped: 'ОТПРАВЛЕН',
+  delivered: 'ДОСТАВЛЕН',
+  cancelled: 'ОТМЕНЁН',
+};
+
+function buildStatusMessage(orderId: string, status: string) {
+  const label = STATUS_LABELS[status] ?? status;
+  const lines = [
+    `🖤 ERD · заказ ${orderId}`,
+    '',
+    `Статус обновлён: <b>${label}</b>`,
+  ];
+
+  if (status === 'processing') {
+    lines.push('', 'Мы приняли заказ и готовим его к отправке.');
+  }
+  if (status === 'shipped') {
+    lines.push('', 'Заказ передан в доставку. Трек-номер появится в карточке заказа.');
+  }
+  if (status === 'delivered') {
+    lines.push('', 'Заказ доставлен. Спасибо за покупку.');
+  }
+  if (status === 'cancelled') {
+    lines.push('', 'Заказ отменён. Если это ошибка, напишите в поддержку.');
+  }
+
+  return lines.join('\n');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -108,7 +142,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const updates: Record<string, unknown> = {};
-        if (patch.status != null) updates.status = toBotStatus(String(patch.status));
+        let statusNotification: { at: string; message: string } | null = null;
+        let statusMessage = '';
+        if (patch.status != null) {
+          const nextStatus = String(patch.status);
+          updates.status = toBotStatus(nextStatus);
+
+          if (toAdminStatus(existing.status as string) !== nextStatus) {
+            const label = STATUS_LABELS[nextStatus] ?? nextStatus;
+            statusMessage = buildStatusMessage(orderId, nextStatus);
+            statusNotification = {
+              at: new Date().toISOString(),
+              message: `Статус заказа ${orderId} изменён на «${label}»`,
+            };
+            updates.notifications = [
+              ...((existing.notifications as unknown[]) ?? []),
+              statusNotification,
+            ];
+          }
+        }
         if (patch.totalAmount != null) updates.total = Number(patch.totalAmount);
         if ((patch.delivery as Record<string, unknown>)?.address != null) {
           updates.address = (patch.delivery as Record<string, unknown>).address;
@@ -127,6 +179,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (shipping.cost != null) updates.shipping_cost = shipping.cost;
         }
         if (patch.notifications != null) updates.notifications = patch.notifications;
+        if (statusNotification) {
+          updates.notifications = [
+            ...((existing.notifications as unknown[]) ?? []),
+            statusNotification,
+          ];
+        }
 
         const { data: updated, error } = await supabase
           .from('orders')
@@ -136,6 +194,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .single();
 
         if (error) throw error;
+
+        if (statusNotification && existing.client_telegram_id) {
+          try {
+            await sendTelegramMessage(
+              botToken,
+              Number(existing.client_telegram_id),
+              statusMessage,
+            );
+          } catch (notifyErr) {
+            console.error('[admin:updateOrder] status notify failed:', notifyErr);
+          }
+        }
+
         res.status(200).json({ ok: true, order: rowToAdminOrder(updated) });
         return;
       }

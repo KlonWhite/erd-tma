@@ -66,12 +66,11 @@ export default function OrderDetailPage() {
   const meta = getStatusMeta(order.status);
   const shippingType = SHIPPING_TYPES.find(s => s.id === shippingId) ?? SHIPPING_TYPES[0];
 
-  const save = () => {
+  const save = async () => {
     if (status !== order.status) {
-      updateOrderStatus(order.id, status);
+      await updateOrderStatus(order.id, status);
     }
-    updateOrder(order.id, {
-      status,
+    await updateOrder(order.id, {
       totalAmount: Number(total) || 0,
       delivery: { address: address.trim() },
       shipping: {
