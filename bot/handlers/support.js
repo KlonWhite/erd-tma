@@ -39,9 +39,9 @@ export async function handleSupportMenu(ctx) {
   await ctx.reply(
     open
       ? `🛟 Диалог #${open.id} открыт.\n\nНапишите сообщение — мы передадим его в поддержку.`
-      : '🛟 **Техническая поддержка**\n\nОпишите вопрос или проблему одним сообщением — оператор ответит в этом чате.',
+      : '🛟 <b>Техническая поддержка</b>\n\nОпишите вопрос или проблему одним сообщением — оператор ответит в этом чате.',
     {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: buildMainKeyboard(client),
     },
   );

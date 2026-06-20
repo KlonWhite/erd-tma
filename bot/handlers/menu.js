@@ -45,7 +45,7 @@ export async function handleMenuText(ctx) {
 
   if (text === BTN.PROFILE) {
     await ctx.reply(profileText(client), {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: keyboard,
     });
     return true;
@@ -54,7 +54,7 @@ export async function handleMenuText(ctx) {
   const info = INFO_MAP[text];
   if (info) {
     await ctx.reply(info, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: keyboard,
     });
     return true;

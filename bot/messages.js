@@ -1,5 +1,13 @@
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export function welcomeText(client, isNew) {
-  const name = client.first_name || client.username || 'друг';
+  const name = escapeHtml(client.first_name || client.username || 'друг');
   const intro = isNew
     ? 'Рады видеть вас в ERD · Ковбои Севера.'
     : 'С возвращением в ERD · Ковбои Севера.';
@@ -15,7 +23,7 @@ export function welcomeText(client, isNew) {
 }
 
 export const ABOUT_SHOP = [
-  '🏪 **О магазине**',
+  '🏪 <b>О магазине</b>',
   '',
   'ERD · Ковбои Севера — fashion-бренд с акцентом на верхнюю одежду, худи и базовый гардероб.',
   '',
@@ -25,17 +33,17 @@ export const ABOUT_SHOP = [
 ].join('\n');
 
 export const DELIVERY_TERMS = [
-  '📦 **Условия доставки**',
+  '📦 <b>Условия доставки</b>',
   '',
-  '**Самовывоз** — бесплатно, Москва, ул. Тверская, 15 · Showroom ERD',
-  '**Курьер** — 790 ₽, Москва 1–2 дня, Россия 2–5 дней',
-  '**Почта** — 490 ₽, 5–10 рабочих дней по России',
+  '<b>Самовывоз</b> — бесплатно, Москва, ул. Тверская, 15 · Showroom ERD',
+  '<b>Курьер</b> — 790 ₽, Москва 1–2 дня, Россия 2–5 дней',
+  '<b>Почта</b> — 490 ₽, 5–10 рабочих дней по России',
   '',
   'Оплата: Telegram Payments или наложенный платёж (кроме самовывоза).',
 ].join('\n');
 
 export const WORKING_HOURS = [
-  '🕐 **Режим работы**',
+  '🕐 <b>Режим работы</b>',
   '',
   'Showroom ERD · Москва',
   'Пн–Пт: 11:00 – 20:00',
@@ -46,20 +54,20 @@ export const WORKING_HOURS = [
 ].join('\n');
 
 export function profileText(client) {
-  const roles = client.roles.join(', ');
+  const roles = escapeHtml(client.roles.join(', '));
   return [
-    '👤 **Профиль**',
+    '👤 <b>Профиль</b>',
     '',
-    `ID: \`${client.telegram_id}\``,
-    `Имя: ${client.first_name || '—'}`,
-    `Username: ${client.username ? `@${client.username}` : '—'}`,
+    `ID: <code>${escapeHtml(client.telegram_id)}</code>`,
+    `Имя: ${escapeHtml(client.first_name || '—')}`,
+    `Username: ${client.username ? `@${escapeHtml(client.username)}` : '—'}`,
     `Роль: ${roles}`,
-    `С нами с: ${client.created_at}`,
+    `С нами с: ${escapeHtml(client.created_at)}`,
   ].join('\n');
 }
 
 export const HELP_TEXT = [
-  '❓ **Помощь**',
+  '❓ <b>Помощь</b>',
   '',
   '/start — главное меню и клавиатура',
   '«Открыть магазин» — запуск Mini App',

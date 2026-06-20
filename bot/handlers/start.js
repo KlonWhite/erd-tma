@@ -9,7 +9,7 @@ export async function handleStart(ctx) {
   const { client, isNew } = await upsertClientFromMessage(from);
 
   await ctx.reply(welcomeText(client, isNew), {
-    parse_mode: 'Markdown',
+    parse_mode: 'HTML',
     reply_markup: buildMainKeyboard(client),
   });
 }
