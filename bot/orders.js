@@ -1,5 +1,11 @@
 import { getSupabase } from './supabaseClient.js';
-import { PENDING_STATUSES, STATUS, getNextStatus, isActiveStatus } from './orderStatus.js';
+import {
+  ADMIN_STATUS_ACTIONS,
+  PENDING_STATUSES,
+  STATUS,
+  getNextStatus,
+  isActiveStatus,
+} from './orderStatus.js';
 
 function mapOrder(row) {
   if (!row) return null;
@@ -132,6 +138,43 @@ export async function advanceOrderStatus(orderId, adminTelegramId) {
     .update({
       status: next,
       assigned_admin_id: adminTelegramId,
+    })
+    .eq('id', orderId)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return mapOrder(data);
+}
+
+export async function setOrderStatus(orderId, adminTelegramId, status) {
+  const order = await getOrder(orderId);
+  if (!order) return null;
+
+  const allowed = new Set(ADMIN_STATUS_ACTIONS.map(action => action.status));
+  if (!allowed.has(status)) return null;
+
+  if (order.assigned_admin_id && order.assigned_admin_id !== adminTelegramId) {
+    return { error: 'assigned_other' };
+  }
+
+  const notifications = [
+    ...(order.notifications ?? []),
+    {
+      event: 'status_changed',
+      at: new Date().toISOString(),
+      channel: 'telegram_admin',
+      status,
+      adminTelegramId,
+    },
+  ];
+
+  const { data, error } = await getSupabase()
+    .from('orders')
+    .update({
+      status,
+      assigned_admin_id: adminTelegramId,
+      notifications,
     })
     .eq('id', orderId)
     .select('*')

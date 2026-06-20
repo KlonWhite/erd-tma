@@ -29,7 +29,15 @@ export async function sendTelegramMessage(
 export function adminOrderKeyboard(orderDbId: number) {
   return {
     inline_keyboard: [
-      [{ text: '✅ Принять заказ', callback_data: `order_accept:${orderDbId}` }],
+      [
+        { text: '✅ В обработке', callback_data: `order_status:${orderDbId}:accepted` },
+        { text: '📦 Сборка', callback_data: `order_status:${orderDbId}:preparing` },
+      ],
+      [
+        { text: '🚚 Отправлен', callback_data: `order_status:${orderDbId}:shipping` },
+        { text: '✅ Доставлен', callback_data: `order_status:${orderDbId}:delivered` },
+      ],
+      [{ text: '❌ Отменить', callback_data: `order_status:${orderDbId}:cancelled` }],
       [{ text: '👁️ Детали заказа', callback_data: `order_detail:${orderDbId}` }],
     ],
   };

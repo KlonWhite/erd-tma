@@ -2,10 +2,10 @@ import { InlineKeyboard } from 'grammy';
 import { getAdminTelegramIds } from './db.js';
 import { parseOrderItems } from './orders.js';
 import {
+  ADMIN_STATUS_ACTIONS,
   CLIENT_NOTIFY,
-  NEXT_ACTION,
+  STATUS,
   STATUS_LABEL,
-  getNextStatus,
 } from './orderStatus.js';
 
 const SHIPPING_LABELS = {
@@ -115,22 +115,26 @@ export function buildOrderDetailMessage(order) {
 }
 
 export function pendingOrderKeyboard(orderId) {
-  return new InlineKeyboard()
-    .text('✅ Принять заказ', `order_accept:${orderId}`)
-    .row()
-    .text('👁️ Детали заказа', `order_detail:${orderId}`);
+  return orderStatusKeyboard({ id: orderId, status: STATUS.PENDING });
 }
 
-export function myOrderKeyboard(order) {
-  const next = getNextStatus(order);
-  if (!next || next === 'accepted' || next === 'pending' || next === 'paid') {
+export function orderStatusKeyboard(order) {
+  if ([STATUS.DELIVERED, STATUS.CANCELLED].includes(order.status)) {
     return new InlineKeyboard().text('👁️ Детали заказа', `order_detail:${order.id}`);
   }
 
-  return new InlineKeyboard()
-    .text(NEXT_ACTION[next], `order_next:${order.id}:${next}`)
-    .row()
-    .text('👁️ Детали заказа', `order_detail:${order.id}`);
+  const keyboard = new InlineKeyboard();
+  ADMIN_STATUS_ACTIONS
+    .filter(action => action.status !== order.status)
+    .forEach((action, index) => {
+      if (index > 0 && index % 2 === 0) keyboard.row();
+      keyboard.text(action.label, `order_status:${order.id}:${action.status}`);
+    });
+  return keyboard.row().text('👁️ Детали заказа', `order_detail:${order.id}`);
+}
+
+export function myOrderKeyboard(order) {
+  return orderStatusKeyboard(order);
 }
 
 /** @deprecated */
@@ -168,7 +172,7 @@ export async function notifyClientOrderStatus(bot, order, status) {
   if (!fn) return;
 
   try {
-    await bot.api.sendMessage(chatId, fn(order.id), { parse_mode: 'HTML' });
+    await bot.api.sendMessage(chatId, fn(order.public_id ?? order.id), { parse_mode: 'HTML' });
   } catch (err) {
     console.error(`[bot] notify client ${chatId}:`, err.message);
   }

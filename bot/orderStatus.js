@@ -6,6 +6,7 @@ export const STATUS = {
   PREPARING: 'preparing',
   SHIPPING: 'shipping',
   DELIVERED: 'delivered',
+  CANCELLED: 'cancelled',
 };
 
 /** Старые заказы могли быть с status=paid */
@@ -24,6 +25,7 @@ export const STATUS_LABEL = {
   preparing: '📦 На сборке',
   shipping: '🚚 В доставке',
   delivered: '✅ Выполнен',
+  cancelled: '❌ Отменён',
 };
 
 export const NEXT_ACTION = {
@@ -33,11 +35,20 @@ export const NEXT_ACTION = {
   delivered: '✅ Доставлен',
 };
 
+export const ADMIN_STATUS_ACTIONS = [
+  { status: STATUS.ACCEPTED, label: '✅ В обработке' },
+  { status: STATUS.PREPARING, label: '📦 Сборка' },
+  { status: STATUS.SHIPPING, label: '🚚 Отправлен' },
+  { status: STATUS.DELIVERED, label: '✅ Доставлен' },
+  { status: STATUS.CANCELLED, label: '❌ Отменить' },
+];
+
 export const CLIENT_NOTIFY = {
   accepted: id => `✅ Ваш заказ #${id} принят! Скоро начнём сборку.`,
   preparing: id => `📦 Заказ #${id}: начата сборка.`,
   shipping: id => `🚚 Заказ #${id} передан в доставку.`,
   delivered: id => `✅ Заказ #${id} выполнен. Спасибо за покупку в ERD!`,
+  cancelled: id => `❌ Заказ #${id} отменён. Если это ошибка, напишите в поддержку.`,
 };
 
 export function getStatusFlow(shipping) {

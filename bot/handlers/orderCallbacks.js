@@ -5,8 +5,9 @@ import {
   getMyActiveOrders,
   getOrder,
   getPendingOrders,
+  setOrderStatus,
 } from '../orders.js';
-import { canAccept, STATUS } from '../orderStatus.js';
+import { STATUS_LABEL, canAccept, STATUS } from '../orderStatus.js';
 import {
   buildMyOrderCard,
   buildNewOrderMessage,
@@ -14,6 +15,7 @@ import {
   buildPendingOrderCard,
   myOrderKeyboard,
   notifyClientOrderStatus,
+  orderStatusKeyboard,
   pendingOrderKeyboard,
 } from '../notifications.js';
 
@@ -58,7 +60,10 @@ export async function handleOrderCallback(ctx, bot) {
     ]);
 
     try {
-      await ctx.editMessageText(text, { parse_mode: 'HTML' });
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+        reply_markup: orderStatusKeyboard(updated),
+      });
     } catch {
       /* unchanged */
     }
@@ -96,6 +101,41 @@ export async function handleOrderCallback(ctx, bot) {
         done ? `${text}\n\n✅ Заказ завершён.` : text,
         { parse_mode: 'HTML', reply_markup: done ? undefined : keyboard },
       );
+    } catch {
+      /* unchanged */
+    }
+    return true;
+  }
+
+  if (action === 'order_status') {
+    const nextStatus = parts[2];
+    const updated = await setOrderStatus(orderId, from.id, nextStatus);
+
+    if (updated?.error === 'assigned_other') {
+      await ctx.answerCallbackQuery({ text: 'Заказ у другого админа', show_alert: true });
+      return true;
+    }
+
+    if (!updated) {
+      await ctx.answerCallbackQuery({ text: 'Нельзя сменить статус', show_alert: true });
+      return true;
+    }
+
+    await notifyClientOrderStatus(bot, updated, updated.status);
+    await ctx.answerCallbackQuery({
+      text: `Заказ #${orderId}: ${STATUS_LABEL[updated.status] ?? updated.status}`,
+    });
+
+    const text = buildNewOrderMessage(updated, [
+      `Статус: ${STATUS_LABEL[updated.status] ?? updated.status}`,
+      `Админ: ${adminDisplayName(from)}`,
+    ]);
+
+    try {
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+        reply_markup: orderStatusKeyboard(updated),
+      });
     } catch {
       /* unchanged */
     }
