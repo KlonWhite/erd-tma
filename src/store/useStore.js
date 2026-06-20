@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import { validatePromo } from '../utils/promo.js';
 import { getProduct } from '../lib/catalog.js';
 import { computeCartTotals, normalizeCart } from '../utils/cartTotals.js';
+import { toggleWishlistRemote } from '../lib/wishlistApi.js';
+import tg from '../tg.js';
 
 function freshProduct(product) {
   if (!product?.id) return product;
@@ -92,17 +94,43 @@ const useStore = create(
 
       wishlist: [],
 
+      setWishlist(productIds) {
+        const next = [...new Set((productIds ?? []).filter(Boolean))];
+        set({ wishlist: next });
+      },
+
       toggleWishlist(productId) {
+        const { wishlist } = get();
+        const wasWishlisted = wishlist.includes(productId);
+        const next = wasWishlisted
+          ? wishlist.filter(id => id !== productId)
+          : [...wishlist, productId];
+
+        set({ wishlist: next });
+
+        if (tg.isMiniApp) {
+          toggleWishlistRemote(productId)
+            .then((serverWishlist) => {
+              if (serverWishlist) get().setWishlist(serverWishlist);
+            })
+            .catch((err) => {
+              console.warn('[wishlist] toggle:', err);
+              set({ wishlist });
+            });
+        }
+      },
+
+      isWishlisted(productId) {
+        return get().wishlist.includes(productId);
+      },
+
+      toggleWishlistLocal(productId) {
         const { wishlist } = get();
         if (wishlist.includes(productId)) {
           set({ wishlist: wishlist.filter(id => id !== productId) });
         } else {
           set({ wishlist: [...wishlist, productId] });
         }
-      },
-
-      isWishlisted(productId) {
-        return get().wishlist.includes(productId);
       },
 
       user: null,
@@ -129,7 +157,7 @@ const useStore = create(
     }),
     {
       name: 'erd-store',
-      version: 6,
+      version: 7,
       migrate(persisted) {
         if (persisted?.cart?.length) {
           persisted.cart = normalizeCart(persisted.cart);

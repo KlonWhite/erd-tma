@@ -13,6 +13,7 @@ import Search from './screens/Search.jsx';
 import Wishlist from './screens/Wishlist.jsx';
 import Stockists from './screens/Stockists.jsx';
 import AdminApp from './admin/AdminApp.jsx';
+import useWishlistSync from './hooks/useWishlistSync.js';
 
 const shell = { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%' };
 
@@ -43,6 +44,8 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useWishlistSync();
+
   return (
     <BrowserRouter>
       <AnimatedRoutes />
