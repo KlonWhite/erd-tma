@@ -47,12 +47,27 @@ function normalizeOrder(order) {
 }
 
 export default function Account() {
-  const name = tg.userName || 'MEMBER';
+  const [tgUser, setTgUser] = useState(tg.user);
   const localOrders = useStore(s => s.orders);
   const wishlist = useStore(s => s.wishlist);
   const [serverOrders, setServerOrders] = useState(null);
   const [loadingOrders, setLoadingOrders] = useState(tg.isMiniApp);
   const [ordersError, setOrdersError] = useState('');
+
+  useEffect(() => {
+    if (tgUser?.id || !tg.isMiniApp) return undefined;
+
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const user = tg.user;
+      if (user?.id || Date.now() - started > 3000) {
+        setTgUser(user);
+        window.clearInterval(timer);
+      }
+    }, 100);
+
+    return () => window.clearInterval(timer);
+  }, [tgUser?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +104,7 @@ export default function Account() {
     ['АДРЕСА', '1'],
     ['ОПЛАТА', 'TG'],
   ];
+  const name = (tgUser?.first_name || tgUser?.username || 'MEMBER').toUpperCase();
 
   return (
     <>

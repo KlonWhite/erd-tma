@@ -42,6 +42,18 @@ function safeInit(fn, label) {
   }
 }
 
+function parseInitDataUser() {
+  const raw = tgApp?.initData;
+  if (typeof raw !== 'string' || !raw) return null;
+
+  try {
+    const user = new URLSearchParams(raw).get('user');
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Initialize
 if (tgApp) {
   safeInit(() => tgApp.ready(), 'ready');
@@ -60,7 +72,7 @@ const tg = {
 
   // User data
   get user() {
-    return tgApp?.initDataUnsafe?.user ?? null;
+    return tgApp?.initDataUnsafe?.user ?? parseInitDataUser();
   },
 
   get userName() {
