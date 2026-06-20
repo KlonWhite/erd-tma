@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import PhotoPlaceholder from './PhotoPlaceholder.jsx';
+import FadeImg from './FadeImg.jsx';
 import Caps from './Caps.jsx';
 import useStore from '../store/useStore.js';
 import { getProductImage } from '../data/productImages.js';
@@ -18,11 +19,13 @@ export default function ProductCard({ product, index = 0 }) {
   return (
     <div
       onClick={go}
+      className="erd-card-in erd-press"
       style={{
         padding: 'var(--erd-grid-gap) var(--erd-grid-gap) 14px',
         borderRight: index % 2 === 0 ? '1px solid var(--erd-rule)' : 'none',
         borderBottom: '1px solid var(--erd-rule)',
         cursor: 'pointer',
+        animationDelay: `${Math.min(index * 45, 360)}ms`,
       }}
     >
       <div style={{ position: 'relative' }}>
@@ -57,7 +60,7 @@ export default function ProductCard({ product, index = 0 }) {
           {wishlisted ? '♥' : '♡'}
         </button>
         {getProductImage(product) ? (
-          <img src={getProductImage(product)} alt={product.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
+          <FadeImg src={getProductImage(product)} alt={product.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
         ) : (
           <PhotoPlaceholder id={product.photoId} kind={product.photoKind} />
         )}

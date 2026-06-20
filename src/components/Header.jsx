@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Wordmark from './Wordmark.jsx';
 import Caps from './Caps.jsx';
@@ -8,6 +9,19 @@ export default function Header({ dark = false }) {
   const navigate = useNavigate();
   const cart = useStore(s => s.cart);
   const cartCount = cart.reduce((a, i) => a + i.qty, 0);
+
+  const prevCount = useRef(cartCount);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    if (cartCount > prevCount.current) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 500);
+      prevCount.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prevCount.current = cartCount;
+  }, [cartCount]);
   const c = dark ? 'var(--erd-paper)' : 'var(--erd-ink)';
   const border = dark ? 'rgba(255,255,255,0.15)' : 'var(--erd-rule)';
 
@@ -26,7 +40,11 @@ export default function Header({ dark = false }) {
         <button onClick={() => go('/search')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <Caps size={10} weight={700} color={c}>ПОИСК</Caps>
         </button>
-        <button onClick={() => go('/cart')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        <button
+          onClick={() => go('/cart')}
+          className={pulse ? 'erd-badge-pulse' : undefined}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
           <Caps size={10} weight={700} color={c}>КОРЗИНА ({cartCount})</Caps>
         </button>
       </div>

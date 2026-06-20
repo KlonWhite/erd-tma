@@ -25,6 +25,7 @@ export default function Home() {
         {/* Split hero — viewport-tied height like editorial luxury mobile heroes */}
         <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', height: 'var(--erd-hero-split-height)' }}>
           <div
+            className="erd-press"
             style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
             onClick={() => go('/collection/cowboys')}
           >
@@ -39,6 +40,7 @@ export default function Home() {
           </div>
 
           <div
+            className="erd-press"
             style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
             onClick={() => go('/collection/femme')}
           >

@@ -65,3 +65,94 @@ body {
 @keyframes erd-blink {
   50% { opacity: 0; }
 }
+
+/* ── Motion ─────────────────────────────────────────────── */
+
+/* Переход между экранами (контейнер роутов перемонтируется по pathname) */
+.erd-route {
+  animation: erd-screen-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes erd-screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Stagger-появление карточек каталога (delay задаётся инлайном по индексу) */
+.erd-card-in {
+  animation: erd-card-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes erd-card-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Тактильный отклик нажатия */
+.erd-press {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.erd-press:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* Пульс счётчика корзины при добавлении товара */
+.erd-badge-pulse {
+  animation: erd-badge-pulse 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes erd-badge-pulse {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+/* Bottom sheet: подложка + шторка */
+.erd-backdrop-in {
+  animation: erd-fade-in 200ms ease both;
+}
+
+@keyframes erd-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.erd-sheet-in {
+  animation: erd-sheet-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes erd-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+
+/* Плавное появление изображений после загрузки */
+.erd-img-fade {
+  opacity: 0;
+  transition: opacity 480ms ease;
+}
+
+.erd-img-fade.is-loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erd-route,
+  .erd-card-in,
+  .erd-sheet-in,
+  .erd-backdrop-in,
+  .erd-badge-pulse {
+    animation: none;
+  }
+
+  .erd-img-fade {
+    transition: none;
+    opacity: 1;
+  }
+
+  .erd-press {
+    transition: none;
+  }
+}

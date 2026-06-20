@@ -1,20 +1,13 @@
 // Telegram WebApp SDK wrapper
 const tgApp = window.Telegram?.WebApp;
 
-function hexFromTg(color) {
-  if (!color || typeof color !== 'string') return null;
-  const c = color.trim();
-  return c.startsWith('#') ? c : `#${c}`;
-}
-
-function applyTelegramTheme() {
-  const tp = tgApp?.themeParams;
-  if (!tp?.bg_color || !tp?.text_color) return;
+function applyFixedLightTheme() {
   const root = document.documentElement;
-  root.style.setProperty('--erd-paper', hexFromTg(tp.bg_color));
-  root.style.setProperty('--erd-ink', hexFromTg(tp.text_color));
-  const hint = tp.hint_color ? hexFromTg(tp.hint_color) : null;
-  if (hint) root.style.setProperty('--erd-muted', hint);
+  root.style.setProperty('--erd-paper', '#ffffff');
+  root.style.setProperty('--erd-ink', '#000000');
+  root.style.setProperty('--erd-ox', '#7a0d0d');
+  root.style.setProperty('--erd-rule', 'rgba(0, 0, 0, 0.12)');
+  root.style.setProperty('--erd-muted', 'rgba(0, 0, 0, 0.55)');
 }
 
 function toSafePx(value) {
@@ -53,9 +46,9 @@ function safeInit(fn, label) {
 if (tgApp) {
   safeInit(() => tgApp.ready(), 'ready');
   safeInit(() => tgApp.expand(), 'expand');
-  safeInit(applyTelegramTheme, 'theme');
+  safeInit(applyFixedLightTheme, 'theme');
   safeInit(applySafeAreaInsets, 'safeArea');
-  safeInit(() => tgApp.onEvent?.('themeChanged', applyTelegramTheme), 'onTheme');
+  safeInit(() => tgApp.onEvent?.('themeChanged', applyFixedLightTheme), 'onTheme');
   safeInit(() => tgApp.onEvent?.('safeAreaChanged', applySafeAreaInsets), 'onSafeArea');
   safeInit(() => tgApp.onEvent?.('contentSafeAreaChanged', applySafeAreaInsets), 'onContentSafeArea');
   safeInit(() => tgApp.onEvent?.('viewportChanged', applySafeAreaInsets), 'onViewport');
@@ -187,7 +180,7 @@ const tg = {
   },
 
   applyTheme() {
-    applyTelegramTheme();
+    applyFixedLightTheme();
   },
 
   applySafeArea() {

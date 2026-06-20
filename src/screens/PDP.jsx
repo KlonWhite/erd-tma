@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProduct } from '../lib/catalog.js';
 import useAdminStore from '../admin/adminStore.js';
 import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
+import FadeImg from '../components/FadeImg.jsx';
 import Caps from '../components/Caps.jsx';
 import Rule from '../components/Rule.jsx';
 import useStore from '../store/useStore.js';
@@ -132,7 +133,8 @@ export default function PDP() {
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: sheetOpen ? 0 : 168 }}>
         <div style={{ position: 'relative', background: '#fff' }}>
           {product.images ? (
-            <img
+            <FadeImg
+              key={imgIndex}
               src={product.images[imgIndex]}
               alt={product.name}
               style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }}
@@ -264,6 +266,7 @@ export default function PDP() {
             <button
               type="button"
               onClick={handleBuyNow}
+              className="erd-press"
               style={{
                 width: '100%',
                 background: 'var(--erd-ink)',
@@ -280,6 +283,7 @@ export default function PDP() {
               <button
                 type="button"
                 onClick={handleBuyNow}
+                className="erd-press"
                 style={{
                   width: '100%',
                   background: 'var(--erd-ink)',
@@ -296,13 +300,15 @@ export default function PDP() {
               <button
                 type="button"
                 onClick={handleAdd}
+                className="erd-press"
                 style={{
                   width: '100%',
-                  background: 'transparent',
-                  color: 'var(--erd-ink)',
+                  background: added ? 'var(--erd-ink)' : 'transparent',
+                  color: added ? 'var(--erd-paper)' : 'var(--erd-ink)',
                   border: '1px solid var(--erd-ink)',
                   padding: '14px 0',
                   cursor: 'pointer',
+                  transition: 'background 200ms ease, color 200ms ease',
                 }}
               >
                 <Caps size={11} weight={700} style={{ letterSpacing: '0.06em' }}>
@@ -322,6 +328,7 @@ export default function PDP() {
             type="button"
             aria-label="Close size picker"
             onClick={() => setSheetOpen(false)}
+            className="erd-backdrop-in"
             style={{
               position: 'fixed',
               top: 0, left: 0, right: 0, bottom: 0,
@@ -337,6 +344,7 @@ export default function PDP() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="pdp-size-sheet-title"
+            className="erd-sheet-in"
             style={{
               position: 'fixed',
               left: 0,

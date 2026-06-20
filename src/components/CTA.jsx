@@ -12,6 +12,7 @@ export default function CTA({ children, light = false, onClick, disabled = false
     <button
       onClick={handleClick}
       disabled={disabled}
+      className="erd-press"
       style={{
         width: '100%',
         background: disabled ? 'rgba(0,0,0,0.2)' : (light ? 'var(--erd-paper)' : 'var(--erd-ink)'),

@@ -38,6 +38,7 @@ export default function BottomNav() {
           <button
             key={path}
             onClick={() => go(path)}
+            className="erd-press"
             style={{
               flex: 1,
               padding: '12px 0 10px',
