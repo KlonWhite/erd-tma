@@ -9,11 +9,11 @@ function freshProduct(product) {
   return getProduct(product.id) ?? product;
 }
 
-const DEMO_ORDERS = [
-  { id: '#ERD-2261', date: '14 MAY 2026', total: '$4,580', status: 'IN TRANSIT' },
-  { id: '#ERD-2089', date: '02 APR 2026', total: '$740', status: 'DELIVERED' },
-  { id: '#ERD-1822', date: '18 JAN 2026', total: '$6,900', status: 'DELIVERED' },
-];
+const DEMO_ORDER_IDS = new Set(['#ERD-2261', '#ERD-2089', '#ERD-1822']);
+
+function withoutDemoOrders(orders = []) {
+  return orders.filter(order => !DEMO_ORDER_IDS.has(order?.id));
+}
 
 const useStore = create(
   persist(
@@ -121,7 +121,7 @@ const useStore = create(
         set({ delivery: { ...get().delivery, ...partial } });
       },
 
-      orders: DEMO_ORDERS,
+      orders: [],
 
       addOrder(entry) {
         set({ orders: [entry, ...get().orders].slice(0, 40) });
@@ -129,7 +129,7 @@ const useStore = create(
     }),
     {
       name: 'erd-store',
-      version: 5,
+      version: 6,
       migrate(persisted) {
         if (persisted?.cart?.length) {
           persisted.cart = normalizeCart(persisted.cart);
@@ -137,6 +137,7 @@ const useStore = create(
         if (!persisted.delivery) {
           persisted.delivery = { address: '', lat: null, lng: null };
         }
+        persisted.orders = withoutDemoOrders(persisted.orders ?? []);
         return persisted;
       },
       onRehydrateStorage: () => (state) => {

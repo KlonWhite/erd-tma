@@ -50,7 +50,7 @@ export default function Account() {
   const localOrders = useStore(s => s.orders);
   const wishlist = useStore(s => s.wishlist);
   const [serverOrders, setServerOrders] = useState(null);
-  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(tg.isMiniApp);
   const [ordersError, setOrdersError] = useState('');
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function Account() {
   }, []);
 
   const orders = useMemo(
-    () => (serverOrders ?? localOrders).map(normalizeOrder),
+    () => (serverOrders ?? (tg.isMiniApp ? [] : localOrders)).map(normalizeOrder),
     [serverOrders, localOrders],
   );
 
