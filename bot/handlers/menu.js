@@ -1,5 +1,5 @@
 import { findClientByTelegramId, upsertClientFromMessage } from '../db.js';
-import { BTN, buildMainKeyboard } from '../keyboards.js';
+import { BTN, buildLaunchKeyboard, buildMainKeyboard } from '../keyboards.js';
 import { handleAvailableOrders, handleMyOrders } from './orderCallbacks.js';
 import { handleSupportMenu } from './support.js';
 import {
@@ -32,6 +32,14 @@ export async function handleMenuText(ctx) {
   const keyboard = buildMainKeyboard(client);
 
   if (await handleSupportMenu(ctx)) {
+    return true;
+  }
+
+  if (text === BTN.OPEN_SHOP || text === BTN.ADMIN) {
+    await ctx.reply(
+      text === BTN.ADMIN ? '⚙️ Запуск админ-панели:' : '🛍️ Запуск магазина:',
+      { reply_markup: buildLaunchKeyboard(client) },
+    );
     return true;
   }
 

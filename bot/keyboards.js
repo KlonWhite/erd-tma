@@ -1,5 +1,5 @@
-import { Keyboard } from 'grammy';
-import { WEBAPP_URL, ADMIN_URL } from './config.js';
+import { InlineKeyboard, Keyboard } from 'grammy';
+import { WEBAPP_URL } from './config.js';
 import { isAdmin } from './db.js';
 
 export const BTN = {
@@ -15,7 +15,7 @@ export const BTN = {
   SUPPORT: '🛟 Техподдержка',
 };
 
-function webAppUrlForClient(client, path = '') {
+export function webAppUrlForClient(client, path = '') {
   const url = new URL(path, WEBAPP_URL);
   url.searchParams.set('source', 'bot_keyboard');
   url.searchParams.set('v', 'account-user-v2');
@@ -32,9 +32,20 @@ function webAppUrlForClient(client, path = '') {
   return url.toString();
 }
 
+export function buildLaunchKeyboard(client) {
+  const kb = new InlineKeyboard()
+    .webApp(BTN.OPEN_SHOP, webAppUrlForClient(client));
+
+  if (isAdmin(client)) {
+    kb.row().webApp(BTN.ADMIN, webAppUrlForClient(client, '/admin'));
+  }
+
+  return kb;
+}
+
 export function buildMainKeyboard(client) {
   const kb = new Keyboard()
-    .webApp(BTN.OPEN_SHOP, webAppUrlForClient(client))
+    .text(BTN.OPEN_SHOP)
     .row()
     .text(BTN.ABOUT)
     .row()
@@ -43,7 +54,7 @@ export function buildMainKeyboard(client) {
     .text(BTN.HOURS);
 
   if (isAdmin(client)) {
-    kb.row().webApp(BTN.ADMIN, webAppUrlForClient(client, '/admin'));
+    kb.row().text(BTN.ADMIN);
     kb.row().text(BTN.AVAILABLE_ORDERS).text(BTN.MY_ORDERS);
   }
 
