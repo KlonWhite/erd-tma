@@ -24,6 +24,10 @@ export function buildInvoiceHtml(order) {
   `).join('');
 
   const created = new Date(order.createdAt).toLocaleString('ru-RU');
+  const tracking = [
+    order.shipping?.providerName || order.shipping?.provider,
+    order.shipping?.trackingNumber ? `трек ${order.shipping.trackingNumber}` : '',
+  ].filter(Boolean).join(' · ');
 
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -61,7 +65,9 @@ export function buildInvoiceHtml(order) {
     <div class="box">
       <h3>Доставка</h3>
       <p>${escapeHtml(order.shipping?.name || '—')}<br />
-      ${escapeHtml(order.delivery?.address || '—')}</p>
+      ${escapeHtml(order.delivery?.address || '—')}<br />
+      ${tracking ? escapeHtml(tracking) : ''}</p>
+      ${order.shipping?.trackingUrl ? `<p style="margin-top:8px"><a href="${escapeHtml(order.shipping.trackingUrl)}">Отследить заказ</a></p>` : ''}
       <span class="status">${escapeHtml(status.label)}</span>
     </div>
   </div>

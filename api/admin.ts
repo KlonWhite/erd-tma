@@ -39,12 +39,20 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'ОТМЕНЁН',
 };
 
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function buildStatusMessage(orderId: string, status: string) {
   const label = STATUS_LABELS[status] ?? status;
   const lines = [
     `🖤 ERD · заказ ${orderId}`,
     '',
-    `Статус обновлён: <b>${label}</b>`,
+    `Статус обновлён: <b>${escapeHtml(label)}</b>`,
   ];
 
   if (status === 'processing') {
@@ -58,6 +66,29 @@ function buildStatusMessage(orderId: string, status: string) {
   }
   if (status === 'cancelled') {
     lines.push('', 'Заказ отменён. Если это ошибка, напишите в поддержку.');
+  }
+
+  return lines.join('\n');
+}
+
+function buildShippingMessage(orderId: string, shipping: Record<string, unknown>) {
+  const provider = String(shipping.providerName || shipping.provider || 'служба доставки');
+  const trackingNumber = String(shipping.trackingNumber || '').trim();
+  const trackingUrl = String(shipping.trackingUrl || '').trim();
+  const lines = [
+    `🖤 ERD · заказ ${orderId}`,
+    '',
+    'Заказ передан в доставку.',
+  ];
+
+  if (provider && provider !== 'служба доставки') {
+    lines.push(`Служба: <b>${escapeHtml(provider)}</b>`);
+  }
+  if (trackingNumber) {
+    lines.push(`Трек-номер: <code>${escapeHtml(trackingNumber)}</code>`);
+  }
+  if (trackingUrl) {
+    lines.push('', `<a href="${escapeHtml(trackingUrl)}">Отследить заказ</a>`);
   }
 
   return lines.join('\n');
@@ -144,16 +175,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const updates: Record<string, unknown> = {};
         let statusNotification: { at: string; message: string } | null = null;
         let statusMessage = '';
+        const existingShipping = (existing.shipping_detail as Record<string, unknown>) ?? {};
+        const patchShipping = (patch.shipping as Record<string, unknown>) ?? null;
+        const nextShipping = patchShipping
+          ? { ...existingShipping, ...patchShipping }
+          : existingShipping;
+        const trackingChanged = Boolean(
+          patchShipping
+          && (
+            String(existingShipping.trackingNumber ?? '') !== String(nextShipping.trackingNumber ?? '')
+            || String(existingShipping.trackingUrl ?? '') !== String(nextShipping.trackingUrl ?? '')
+            || String(existingShipping.provider ?? '') !== String(nextShipping.provider ?? '')
+          ),
+        );
+        const nextStatus = patch.status != null
+          ? String(patch.status)
+          : toAdminStatus(existing.status as string);
+
         if (patch.status != null) {
-          const nextStatus = String(patch.status);
           updates.status = toBotStatus(nextStatus);
 
           if (toAdminStatus(existing.status as string) !== nextStatus) {
             const label = STATUS_LABELS[nextStatus] ?? nextStatus;
-            statusMessage = buildStatusMessage(orderId, nextStatus);
+            statusMessage = nextStatus === 'shipped'
+              ? buildShippingMessage(orderId, nextShipping)
+              : buildStatusMessage(orderId, nextStatus);
             statusNotification = {
               at: new Date().toISOString(),
-              message: `Статус заказа ${orderId} изменён на «${label}»`,
+              message: nextStatus === 'shipped' && nextShipping.trackingNumber
+                ? `Заказ ${orderId} отправлен · трек ${nextShipping.trackingNumber}`
+                : `Статус заказа ${orderId} изменён на «${label}»`,
             };
             updates.notifications = [
               ...((existing.notifications as unknown[]) ?? []),
@@ -170,13 +221,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
         }
         if (patch.shipping != null) {
-          updates.shipping_detail = {
-            ...((existing.shipping_detail as Record<string, unknown>) ?? {}),
-            ...(patch.shipping as Record<string, unknown>),
-          };
+          updates.shipping_detail = nextShipping;
           const shipping = patch.shipping as Record<string, unknown>;
           if (shipping.id) updates.shipping = shipping.id;
           if (shipping.cost != null) updates.shipping_cost = shipping.cost;
+        }
+        if (!statusNotification && nextStatus === 'shipped' && trackingChanged && nextShipping.trackingNumber) {
+          statusMessage = buildShippingMessage(orderId, nextShipping);
+          statusNotification = {
+            at: new Date().toISOString(),
+            message: `Добавлен трек-номер заказа ${orderId}: ${nextShipping.trackingNumber}`,
+          };
         }
         if (patch.notifications != null) updates.notifications = patch.notifications;
         if (statusNotification) {

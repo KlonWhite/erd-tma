@@ -34,17 +34,29 @@ const btnOutline = {
   color: 'var(--erd-ink)',
 };
 
+const DELIVERY_PROVIDERS = [
+  { id: '', name: 'НЕ УКАЗАНО' },
+  { id: 'cdek', name: 'СДЭК' },
+  { id: 'boxberry', name: 'BOXBERRY' },
+  { id: 'russian-post', name: 'ПОЧТА РОССИИ' },
+  { id: 'courier', name: 'КУРЬЕР' },
+  { id: 'pickup', name: 'САМОВЫВОЗ' },
+  { id: 'other', name: 'ДРУГОЕ' },
+];
+
 export default function OrderDetailPage() {
   const { orderId } = useParams();
   const id = decodeURIComponent(orderId ?? '');
   const order = useAdminStore(s => s.getOrder(id));
   const updateOrder = useAdminStore(s => s.updateOrder);
-  const updateOrderStatus = useAdminStore(s => s.updateOrderStatus);
 
   const [address, setAddress] = useState('');
   const [total, setTotal] = useState('');
   const [status, setStatus] = useState('pending');
   const [shippingId, setShippingId] = useState('courier');
+  const [trackingProvider, setTrackingProvider] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
 
   useEffect(() => {
     if (!order) return;
@@ -52,6 +64,9 @@ export default function OrderDetailPage() {
     setTotal(String(order.totalAmount ?? 0));
     setStatus(order.status);
     setShippingId(order.shipping?.id ?? 'courier');
+    setTrackingProvider(order.shipping?.provider ?? '');
+    setTrackingNumber(order.shipping?.trackingNumber ?? '');
+    setTrackingUrl(order.shipping?.trackingUrl ?? '');
   }, [order?.id, order]);
 
   if (!order) {
@@ -65,18 +80,21 @@ export default function OrderDetailPage() {
 
   const meta = getStatusMeta(order.status);
   const shippingType = SHIPPING_TYPES.find(s => s.id === shippingId) ?? SHIPPING_TYPES[0];
+  const provider = DELIVERY_PROVIDERS.find(p => p.id === trackingProvider);
 
   const save = async () => {
-    if (status !== order.status) {
-      await updateOrderStatus(order.id, status);
-    }
     await updateOrder(order.id, {
+      status,
       totalAmount: Number(total) || 0,
       delivery: { address: address.trim() },
       shipping: {
         id: shippingId,
         name: shippingType.name,
         cost: order.shipping?.cost ?? 0,
+        provider: trackingProvider || null,
+        providerName: provider?.name ?? '',
+        trackingNumber: trackingNumber.trim() || null,
+        trackingUrl: trackingUrl.trim() || null,
       },
     });
     alert('Заказ сохранён');
@@ -126,6 +144,31 @@ export default function OrderDetailPage() {
           style={{ ...fieldStyle, textTransform: 'none', resize: 'vertical' }}
         />
 
+        <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 12 }}>СЛУЖБА ДОСТАВКИ</Caps>
+        <select value={trackingProvider} onChange={e => setTrackingProvider(e.target.value)} style={fieldStyle}>
+          {DELIVERY_PROVIDERS.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+
+        <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 12 }}>ТРЕК-НОМЕР</Caps>
+        <input
+          type="text"
+          value={trackingNumber}
+          onChange={e => setTrackingNumber(e.target.value)}
+          placeholder="1234567890"
+          style={{ ...fieldStyle, textTransform: 'none' }}
+        />
+
+        <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 12 }}>ССЫЛКА НА ОТСЛЕЖИВАНИЕ</Caps>
+        <input
+          type="url"
+          value={trackingUrl}
+          onChange={e => setTrackingUrl(e.target.value)}
+          placeholder="https://..."
+          style={{ ...fieldStyle, textTransform: 'none' }}
+        />
+
         <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 12 }}>СУММА (₽)</Caps>
         <input
           type="number"
@@ -151,6 +194,21 @@ export default function OrderDetailPage() {
           {order.customer?.telegramId && ` · ID ${order.customer.telegramId}`}
         </div>
       </div>
+
+      {(order.shipping?.trackingNumber || order.shipping?.providerName) && (
+        <div style={card}>
+          <Caps size={9} weight={700} color="var(--erd-muted)">ОТСЛЕЖИВАНИЕ</Caps>
+          <div style={{ marginTop: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, lineHeight: 1.6, textTransform: 'uppercase' }}>
+            {order.shipping?.providerName || order.shipping?.provider || 'СЛУЖБА НЕ УКАЗАНА'}<br />
+            {order.shipping?.trackingNumber || 'ТРЕК НЕ УКАЗАН'}<br />
+            {order.shipping?.trackingUrl && (
+              <a href={order.shipping.trackingUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+                ОТКРЫТЬ ОТСЛЕЖИВАНИЕ
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={card}>
         <Caps size={9} weight={700} color="var(--erd-muted)">ТОВАРЫ</Caps>

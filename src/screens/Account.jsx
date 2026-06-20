@@ -41,6 +41,7 @@ function normalizeOrder(order) {
     statusLabel: status.label,
     statusColor: status.color,
     items: order.items ?? [],
+    shipping: order.shipping ?? {},
     notifications: order.notifications ?? [],
   };
 }
@@ -180,6 +181,22 @@ export default function Account() {
                 {o.items.slice(0, 2).map(item => `${item.name} · ${item.size} ×${item.qty}`).join(' / ')}
                 {o.items.length > 2 ? ` / +${o.items.length - 2}` : ''}
               </Caps>
+            )}
+            {(o.shipping?.trackingNumber || o.shipping?.providerName) && (
+              <Caps size={8} weight={700} color="var(--erd-ox)" style={{ display: 'block', marginTop: 6, lineHeight: 1.5 }}>
+                ДОСТАВКА: {o.shipping.providerName || o.shipping.provider || '—'}
+                {o.shipping.trackingNumber ? ` · ${o.shipping.trackingNumber}` : ''}
+              </Caps>
+            )}
+            {o.shipping?.trackingUrl && (
+              <a
+                href={o.shipping.trackingUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'block', marginTop: 6, color: 'inherit', textDecoration: 'underline' }}
+              >
+                <Caps size={8} weight={800}>ОТСЛЕДИТЬ ЗАКАЗ ↗</Caps>
+              </a>
             )}
             {o.notifications.length > 0 && (
               <Caps size={8} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 6, lineHeight: 1.5 }}>
