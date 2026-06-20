@@ -15,9 +15,26 @@ export const BTN = {
   SUPPORT: '🛟 Техподдержка',
 };
 
+function webAppUrlForClient(client, path = '') {
+  const url = new URL(path, WEBAPP_URL);
+  url.searchParams.set('source', 'bot_keyboard');
+  url.searchParams.set('v', 'account-user-v2');
+
+  if (client?.telegram_id) {
+    const fallbackUser = {
+      id: client.telegram_id,
+      first_name: client.first_name ?? '',
+      username: client.username ?? '',
+    };
+    url.searchParams.set('tg_user', Buffer.from(JSON.stringify(fallbackUser)).toString('base64url'));
+  }
+
+  return url.toString();
+}
+
 export function buildMainKeyboard(client) {
   const kb = new Keyboard()
-    .webApp(BTN.OPEN_SHOP, WEBAPP_URL)
+    .webApp(BTN.OPEN_SHOP, webAppUrlForClient(client))
     .row()
     .text(BTN.ABOUT)
     .row()
@@ -26,7 +43,7 @@ export function buildMainKeyboard(client) {
     .text(BTN.HOURS);
 
   if (isAdmin(client)) {
-    kb.row().webApp(BTN.ADMIN, ADMIN_URL);
+    kb.row().webApp(BTN.ADMIN, webAppUrlForClient(client, '/admin'));
     kb.row().text(BTN.AVAILABLE_ORDERS).text(BTN.MY_ORDERS);
   }
 

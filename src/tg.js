@@ -54,6 +54,23 @@ function parseInitDataUser() {
   }
 }
 
+function parseFallbackQueryUser() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = new URLSearchParams(window.location.search).get('tg_user');
+    if (!raw) return null;
+    const normalized = raw.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const bytes = Uint8Array.from(window.atob(padded), (char) => char.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    const user = JSON.parse(json);
+    return user?.id ? user : null;
+  } catch {
+    return null;
+  }
+}
+
 // Initialize
 if (tgApp) {
   safeInit(() => tgApp.ready(), 'ready');
@@ -72,7 +89,7 @@ const tg = {
 
   // User data
   get user() {
-    return tgApp?.initDataUnsafe?.user ?? parseInitDataUser();
+    return tgApp?.initDataUnsafe?.user ?? parseInitDataUser() ?? parseFallbackQueryUser();
   },
 
   get userName() {
