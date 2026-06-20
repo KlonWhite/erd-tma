@@ -196,7 +196,7 @@ export default function Checkout() {
 
   const goBack = () => {
     if (step > 0) setStep(s => s - 1);
-    else navigate('/cart');
+    else navigate('/cart', { replace: true });
   };
 
   return (

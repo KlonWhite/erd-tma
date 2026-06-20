@@ -88,7 +88,7 @@ export default function Cart() {
         </div>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home', { replace: true })}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 300 }}
         >
           ✕
