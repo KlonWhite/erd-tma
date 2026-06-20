@@ -1,5 +1,5 @@
 import { upsertClientFromMessage } from '../db.js';
-import { buildLaunchKeyboard, buildMainKeyboard } from '../keyboards.js';
+import { buildMainKeyboard } from '../keyboards.js';
 import { welcomeText } from '../messages.js';
 
 export async function handleStart(ctx) {
@@ -11,9 +11,5 @@ export async function handleStart(ctx) {
   await ctx.reply(welcomeText(client, isNew), {
     parse_mode: 'HTML',
     reply_markup: buildMainKeyboard(client),
-  });
-
-  await ctx.reply('🛍️ Запуск магазина:', {
-    reply_markup: buildLaunchKeyboard(client),
   });
 }

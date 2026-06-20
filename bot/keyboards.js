@@ -1,4 +1,4 @@
-import { InlineKeyboard, Keyboard } from 'grammy';
+import { Keyboard } from 'grammy';
 import { WEBAPP_URL } from './config.js';
 import { isAdmin } from './db.js';
 
@@ -32,20 +32,9 @@ export function webAppUrlForClient(client, path = '') {
   return url.toString();
 }
 
-export function buildLaunchKeyboard(client) {
-  const kb = new InlineKeyboard()
-    .webApp(BTN.OPEN_SHOP, webAppUrlForClient(client));
-
-  if (isAdmin(client)) {
-    kb.row().webApp(BTN.ADMIN, webAppUrlForClient(client, '/admin'));
-  }
-
-  return kb;
-}
-
 export function buildMainKeyboard(client) {
   const kb = new Keyboard()
-    .text(BTN.OPEN_SHOP)
+    .webApp(BTN.OPEN_SHOP, webAppUrlForClient(client))
     .row()
     .text(BTN.ABOUT)
     .row()
@@ -54,7 +43,7 @@ export function buildMainKeyboard(client) {
     .text(BTN.HOURS);
 
   if (isAdmin(client)) {
-    kb.row().text(BTN.ADMIN);
+    kb.row().webApp(BTN.ADMIN, webAppUrlForClient(client, '/admin'));
     kb.row().text(BTN.AVAILABLE_ORDERS).text(BTN.MY_ORDERS);
   }
 
