@@ -6,8 +6,23 @@ import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
 import FadeImg from '../components/FadeImg.jsx';
 import Caps from '../components/Caps.jsx';
 import Rule from '../components/Rule.jsx';
+import Skeleton from '../components/Skeleton.jsx';
 import useStore from '../store/useStore.js';
 import tg from '../tg.js';
+
+const infoRows = [
+  ['ДОСТАВКА', 'ПВЗ / курьер / самовывоз'],
+  ['ВОЗВРАТ', '14 дней после получения'],
+  ['ОПЛАТА', 'Telegram checkout'],
+];
+
+function getStockForSize(product, size) {
+  const stock = product.stockBySize ?? product.stock_by_size;
+  if (stock && Object.prototype.hasOwnProperty.call(stock, size)) {
+    return Number(stock[size]) || 0;
+  }
+  return product.soldSizes?.includes(size) ? 0 : 1;
+}
 
 export default function PDP() {
   const { id } = useParams();
@@ -42,13 +57,22 @@ export default function PDP() {
     </div>
   );
 
+  const galleryImages = Array.isArray(product.images) && product.images.length
+    ? product.images
+    : [];
+  const sizes = product.sizes?.length ? product.sizes : ['ONE SIZE'];
+  const soldSizes = product.soldSizes ?? [];
+  const availableSizes = sizes.filter(size => getStockForSize(product, size) > 0);
+  const isSoldOut = availableSizes.length === 0;
+  const activeStock = selectedSize ? getStockForSize(product, selectedSize) : null;
+
   const openSizeSheet = () => {
     tg.haptic.selection();
     setSheetOpen(true);
   };
 
   const pickSize = (s) => {
-    if (product.soldSizes.includes(s)) return;
+    if (soldSizes.includes(s) || getStockForSize(product, s) <= 0) return;
     tg.haptic.selection();
     setSelectedSize(s);
     setSheetOpen(false);
@@ -59,7 +83,7 @@ export default function PDP() {
       openSizeSheet();
       return;
     }
-    if (product.soldSizes.includes(selectedSize)) {
+    if (soldSizes.includes(selectedSize) || getStockForSize(product, selectedSize) <= 0) {
       tg.haptic.notification('error');
       return;
     }
@@ -74,7 +98,7 @@ export default function PDP() {
       openSizeSheet();
       return;
     }
-    if (product.soldSizes.includes(selectedSize)) {
+    if (soldSizes.includes(selectedSize) || getStockForSize(product, selectedSize) <= 0) {
       tg.haptic.notification('error');
       return;
     }
@@ -131,35 +155,74 @@ export default function PDP() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: sheetOpen ? 0 : 168 }}>
-        <div style={{ position: 'relative', background: '#fff' }}>
-          {product.images ? (
-            <FadeImg
-              key={imgIndex}
-              src={product.images[imgIndex]}
-              alt={product.name}
-              style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }}
-            />
-          ) : (
-            <PhotoPlaceholder id={product.photoId} kind={product.photoKind} />
-          )}
+        <div style={{ position: 'relative', background: '#fff', borderBottom: '1px solid var(--erd-rule)' }}>
+          <div style={{ position: 'relative', overflow: 'hidden' }}>
+            {galleryImages.length ? (
+              <>
+                <Skeleton height="100%" style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+                <FadeImg
+                  key={imgIndex}
+                  src={galleryImages[Math.min(imgIndex, galleryImages.length - 1)]}
+                  alt={product.name}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    width: '100%',
+                    aspectRatio: '3/4',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
+                />
+              </>
+            ) : (
+              <PhotoPlaceholder id={product.photoId} kind={product.photoKind} />
+            )}
+            <div style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 3,
+              display: 'flex',
+              gap: 6,
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                <Caps size={8} weight={800} color={isSoldOut ? 'var(--erd-muted)' : 'var(--erd-ox)'}>
+                  {isSoldOut ? 'SOLD OUT' : `${availableSizes.length} РАЗМ. В НАЛИЧИИ`}
+                </Caps>
+              </div>
+              {product.edition && (
+                <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.82)', color: 'var(--erd-paper)' }}>
+                  <Caps size={8} weight={800} color="var(--erd-paper)">{product.edition}</Caps>
+                </div>
+              )}
+            </div>
+          </div>
           <div style={{
-            position: 'absolute', bottom: 10, left: 0, right: 0,
-            display: 'flex', justifyContent: 'center', gap: 6,
+            display: 'grid',
+            gridTemplateColumns: `repeat(${Math.min(Math.max(galleryImages.length || 4, 3), 5)}, 1fr)`,
+            gap: 6,
+            padding: '8px var(--erd-gutter)',
+            background: 'var(--erd-paper)',
           }}>
-            {(product.images || [0, 1, 2, 3, 4]).map((_, i) => (
+            {(galleryImages.length ? galleryImages : [0, 1, 2, 3]).slice(0, 5).map((src, i) => (
               <button
                 type="button"
                 key={i}
                 onClick={() => setImgIndex(i)}
+                className={`erd-pdp-thumb${i === imgIndex ? ' is-active' : ''}`}
                 style={{
-                  width: i === imgIndex ? 18 : 6,
-                  height: 3,
-                  background: i === imgIndex ? 'var(--erd-ink)' : 'rgba(0,0,0,0.2)',
-                  border: 'none',
                   cursor: 'pointer',
                   padding: 0,
+                  background: 'var(--erd-paper)',
                 }}
-              />
+              >
+                {galleryImages.length ? (
+                  <img src={src} alt="" style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <PhotoPlaceholder id={(product.photoId ?? 0) + i} kind={product.photoKind} />
+                )}
+              </button>
             ))}
           </div>
         </div>
@@ -185,9 +248,12 @@ export default function PDP() {
           <div style={{ marginTop: 14 }}>
             <Caps size={13} weight={800}>{product.price.toLocaleString()} ₽</Caps>
           </div>
-          <div style={{ marginTop: 14, padding: '0 8px' }}>
+          <div style={{ marginTop: 14, padding: '0 8px', display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Caps size={8} weight={800} color="var(--erd-ox)" style={{ lineHeight: 1.65 }}>
+              {isSoldOut ? 'ТОВАР РАСПРОДАН' : 'ГОТОВ К ЗАКАЗУ'}
+            </Caps>
             <Caps size={8} weight={700} color="var(--erd-muted)" style={{ lineHeight: 1.65 }}>
-              БЕСПЛАТНАЯ ДОСТАВКА · ВОЗВРАТ В ТЕЧЕНИЕ 14 ДНЕЙ
+              · БЕСПЛАТНАЯ ДОСТАВКА ОТ 15 000 ₽
             </Caps>
           </div>
         </div>
@@ -222,9 +288,49 @@ export default function PDP() {
           </div>
         )}
 
+        <div style={{ padding: '0 var(--erd-gutter) 18px' }}>
+          {infoRows.map(([label, value]) => (
+            <div key={label} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 18,
+              padding: '12px 0',
+              borderBottom: '1px solid var(--erd-rule)',
+            }}>
+              <Caps size={9} weight={800} color="var(--erd-muted)">{label}</Caps>
+              <Caps size={9} weight={800} style={{ textAlign: 'right' }}>{value}</Caps>
+            </div>
+          ))}
+        </div>
+
         <Rule />
 
         <div style={{ padding: '16px var(--erd-gutter) 24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
+            {sizes.slice(0, 8).map(size => {
+              const stock = getStockForSize(product, size);
+              const active = selectedSize === size;
+              return (
+                <button
+                  type="button"
+                  key={size}
+                  onClick={() => pickSize(size)}
+                  disabled={stock <= 0}
+                  style={{
+                    border: `1px solid ${active ? 'var(--erd-ink)' : 'var(--erd-rule)'}`,
+                    background: active ? 'var(--erd-ink)' : 'transparent',
+                    color: active ? 'var(--erd-paper)' : 'var(--erd-ink)',
+                    opacity: stock <= 0 ? 0.32 : 1,
+                    padding: '10px 0',
+                    cursor: stock <= 0 ? 'not-allowed' : 'pointer',
+                    textDecoration: stock <= 0 ? 'line-through' : 'none',
+                  }}
+                >
+                  <Caps size={9} weight={800}>{size}</Caps>
+                </button>
+              );
+            })}
+          </div>
           <button
             type="button"
             onClick={openSizeSheet}
@@ -241,7 +347,7 @@ export default function PDP() {
           >
             <Caps size={10} weight={800}>РАЗМЕР</Caps>
             <Caps size={10} weight={700} color={selectedSize ? 'var(--erd-ink)' : 'var(--erd-ox)'}>
-              {selectedSize || 'ВЫБРАТЬ'}
+              {selectedSize ? `${selectedSize}${activeStock != null ? ` · ${activeStock} ШТ.` : ''}` : 'ВЫБРАТЬ'}
             </Caps>
           </button>
         </div>
@@ -262,21 +368,30 @@ export default function PDP() {
           flexDirection: 'column',
           gap: 8,
         }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 2px 2px' }}>
+            <Caps size={9} weight={800} color="var(--erd-muted)">
+              {selectedSize ? `РАЗМЕР ${selectedSize}` : 'РАЗМЕР НЕ ВЫБРАН'}
+            </Caps>
+            <Caps size={11} weight={900}>{product.price.toLocaleString()} ₽</Caps>
+          </div>
           {!selectedSize ? (
             <button
               type="button"
               onClick={handleBuyNow}
+              disabled={isSoldOut}
               className="erd-press"
               style={{
                 width: '100%',
-                background: 'var(--erd-ink)',
+                background: isSoldOut ? 'rgba(0,0,0,0.28)' : 'var(--erd-ink)',
                 color: 'var(--erd-paper)',
                 border: 'none',
                 padding: '16px 0',
-                cursor: 'pointer',
+                cursor: isSoldOut ? 'not-allowed' : 'pointer',
               }}
             >
-              <Caps size={11} weight={700} style={{ letterSpacing: '0.08em' }}>ВЫБРАТЬ РАЗМЕР</Caps>
+              <Caps size={11} weight={700} style={{ letterSpacing: '0.08em' }}>
+                {isSoldOut ? 'НЕТ В НАЛИЧИИ' : 'ВЫБРАТЬ РАЗМЕР'}
+              </Caps>
             </button>
           ) : (
             <>
@@ -385,8 +500,8 @@ export default function PDP() {
               </Caps>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px var(--erd-gutter) 20px' }}>
-              {product.sizes.map(s => {
-                const sold = product.soldSizes.includes(s);
+              {sizes.map(s => {
+                const sold = soldSizes.includes(s) || getStockForSize(product, s) <= 0;
                 const active = selectedSize === s;
                 return (
                   <button

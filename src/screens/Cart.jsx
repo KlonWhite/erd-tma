@@ -4,6 +4,7 @@ import ProductThumb from '../components/ProductThumb.jsx';
 import Caps from '../components/Caps.jsx';
 import Rule from '../components/Rule.jsx';
 import CTA from '../components/CTA.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import useStore from '../store/useStore.js';
 import { getProduct } from '../lib/catalog.js';
 import { computeCartTotals } from '../utils/cartTotals.js';
@@ -105,28 +106,14 @@ export default function Cart() {
         paddingBottom: cart.length > 0 ? FOOTER_H : 16,
       }}>
         {cart.length === 0 ? (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px 28px',
-            gap: 16,
-          }}>
-            <Caps size={11} weight={700} color="var(--erd-muted)">КОРЗИНА ПУСТА</Caps>
-            <button
-              type="button"
-              onClick={() => navigate('/home')}
-              style={{
-                border: '1px solid var(--erd-ink)',
-                background: 'transparent',
-                padding: '12px 24px',
-                cursor: 'pointer',
-              }}
-            >
-              <Caps size={10} weight={800}>ПРОДОЛЖИТЬ ПОКУПКИ</Caps>
-            </button>
-          </div>
+          <EmptyState
+            eyebrow="BAG · 00"
+            title="Корзина ждёт первый предмет"
+            body="Добавьте размер из карточки товара — здесь появятся состав заказа, промокод и итоговая сумма."
+            action="ПРОДОЛЖИТЬ ПОКУПКИ"
+            onAction={() => navigate('/home')}
+            symbol="B"
+          />
         ) : (
           cart.map(item => {
             const product = getProduct(item.productId ?? item.product?.id) ?? item.product;

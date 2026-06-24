@@ -5,6 +5,7 @@ import useAdminStore from '../admin/adminStore.js';
 import Header from '../components/Header.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import Caps from '../components/Caps.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import BottomNav from '../components/BottomNav.jsx';
 import tg from '../tg.js';
 
@@ -297,23 +298,14 @@ export default function Collection() {
 
         {/* Product grid */}
         {filtered.length === 0 ? (
-          <div style={{ padding: '48px var(--erd-gutter)', textAlign: 'center' }}>
-            <Caps size={11} weight={700} color="var(--erd-muted)">НЕТ ТОВАРОВ В ЭТОМ ФИЛЬТРЕ</Caps>
-            <button
-              type="button"
-              onClick={resetFilters}
-              style={{
-                display: 'block',
-                margin: '18px auto 0',
-                border: '1px solid var(--erd-ink)',
-                background: 'transparent',
-                padding: '10px 20px',
-                cursor: 'pointer',
-              }}
-            >
-              <Caps size={10} weight={800}>ПОКАЗАТЬ ВСЕ</Caps>
-            </button>
-          </div>
+          <EmptyState
+            eyebrow="FILTER · NO MATCH"
+            title="Под этот отбор ничего не попало"
+            body="Сбросьте размер, цену или наличие, чтобы увидеть всю коллекцию."
+            action="ПОКАЗАТЬ ВСЕ"
+            onAction={resetFilters}
+            symbol="0"
+          />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
             {filtered.map((product, i) => (

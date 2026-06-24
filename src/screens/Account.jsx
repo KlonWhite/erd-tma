@@ -3,6 +3,8 @@ import Header from '../components/Header.jsx';
 import Rule from '../components/Rule.jsx';
 import Caps from '../components/Caps.jsx';
 import BottomNav from '../components/BottomNav.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import Skeleton from '../components/Skeleton.jsx';
 import useStore from '../store/useStore.js';
 import { fetchMyOrders, fetchProfile } from '../lib/accountApi.js';
 import tg from '../tg.js';
@@ -44,6 +46,22 @@ function normalizeOrder(order) {
     shipping: order.shipping ?? {},
     notifications: order.notifications ?? [],
   };
+}
+
+function OrderSkeleton() {
+  return (
+    <div style={{ padding: '14px 18px', borderTop: '1px solid var(--erd-rule)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Skeleton width={92} height={12} />
+        <Skeleton width={76} height={10} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
+        <Skeleton width={72} height={9} />
+        <Skeleton width={64} height={12} />
+      </div>
+      <Skeleton width="84%" height={8} style={{ marginTop: 12 }} />
+    </div>
+  );
 }
 
 export default function Account() {
@@ -233,16 +251,24 @@ export default function Account() {
           </div>
         )}
 
-        {orders.length === 0 && !loadingOrders && (
-          <div style={{ padding: '28px 18px', borderTop: '1px solid var(--erd-rule)' }}>
-            <Caps size={11} weight={800}>ЗАКАЗОВ ПОКА НЕТ</Caps>
-            <Caps size={9} weight={700} color="var(--erd-muted)" style={{ display: 'block', marginTop: 8, lineHeight: 1.5 }}>
-              Оформите первый заказ — история появится здесь автоматически.
-            </Caps>
-          </div>
+        {loadingOrders && (
+          <>
+            <OrderSkeleton />
+            <OrderSkeleton />
+          </>
         )}
 
-        {orders.map(o => (
+        {orders.length === 0 && !loadingOrders && (
+          <EmptyState
+            compact
+            eyebrow="ORDERS · HISTORY"
+            title="Заказов пока нет"
+            body="После оформления покупки здесь появятся статусы, состав заказа и трек-номер доставки."
+            symbol="#"
+          />
+        )}
+
+        {!loadingOrders && orders.map(o => (
           <div key={o.id} style={{
             padding: '14px 18px',
             borderTop: '1px solid var(--erd-rule)',

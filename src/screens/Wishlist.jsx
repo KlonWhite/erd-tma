@@ -4,6 +4,7 @@ import Rule from '../components/Rule.jsx';
 import Caps from '../components/Caps.jsx';
 import PhotoPlaceholder from '../components/PhotoPlaceholder.jsx';
 import BottomNav from '../components/BottomNav.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import { getProduct } from '../lib/catalog.js';
 import useStore from '../store/useStore.js';
 import tg from '../tg.js';
@@ -39,26 +40,14 @@ export default function Wishlist() {
         <Rule />
 
         {items.length === 0 ? (
-          <div style={{
-            padding: '60px 28px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-          }}>
-            <Caps size={11} weight={700} color="var(--erd-muted)">СПИСОК ИЗБРАННОГО ПУСТ</Caps>
-            <button
-              onClick={() => navigate('/collection/homme')}
-              style={{
-                border: '1px solid var(--erd-ink)',
-                background: 'transparent',
-                padding: '12px 24px',
-                cursor: 'pointer',
-              }}
-            >
-              <Caps size={10} weight={800}>СМОТРЕТЬ КОЛЛЕКЦИЮ</Caps>
-            </button>
-          </div>
+          <EmptyState
+            eyebrow="WISHLIST · PRIVATE"
+            title="Список сохранённых пуст"
+            body="Нажимайте сердце на товарах — избранное синхронизируется с вашим Telegram-профилем."
+            action="СМОТРЕТЬ КОЛЛЕКЦИЮ"
+            onAction={() => navigate('/collection/homme')}
+            symbol="♥"
+          />
         ) : (
           items.map(product => (
             <div key={product.id} style={{
