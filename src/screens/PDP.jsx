@@ -64,7 +64,6 @@ export default function PDP() {
   const soldSizes = product.soldSizes ?? [];
   const availableSizes = sizes.filter(size => getStockForSize(product, size) > 0);
   const isSoldOut = availableSizes.length === 0;
-  const activeStock = selectedSize ? getStockForSize(product, selectedSize) : null;
 
   const openSizeSheet = () => {
     tg.haptic.selection();
@@ -306,6 +305,12 @@ export default function PDP() {
         <Rule />
 
         <div style={{ padding: '16px var(--erd-gutter) 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <Caps size={10} weight={800}>ВЫБЕРИТЕ РАЗМЕР</Caps>
+            <Caps size={9} weight={800} color={selectedSize ? 'var(--erd-ink)' : 'var(--erd-muted)'}>
+              {selectedSize ? `ВЫБРАН ${selectedSize}` : `${availableSizes.length} ДОСТУПНО`}
+            </Caps>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
             {sizes.slice(0, 8).map(size => {
               const stock = getStockForSize(product, size);
@@ -331,25 +336,21 @@ export default function PDP() {
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={openSizeSheet}
-            style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: 'none',
-              border: '1px solid var(--erd-rule)',
-              padding: '14px 16px',
-              cursor: 'pointer',
-            }}
-          >
-            <Caps size={10} weight={800}>РАЗМЕР</Caps>
-            <Caps size={10} weight={700} color={selectedSize ? 'var(--erd-ink)' : 'var(--erd-ox)'}>
-              {selectedSize ? `${selectedSize}${activeStock != null ? ` · ${activeStock} ШТ.` : ''}` : 'ВЫБРАТЬ'}
-            </Caps>
-          </button>
+          {sizes.length > 8 && (
+            <button
+              type="button"
+              onClick={openSizeSheet}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: '1px solid var(--erd-rule)',
+                padding: '12px 16px',
+                cursor: 'pointer',
+              }}
+            >
+              <Caps size={10} weight={800} color="var(--erd-muted)">ПОКАЗАТЬ ВСЕ РАЗМЕРЫ</Caps>
+            </button>
+          )}
         </div>
       </div>
 
