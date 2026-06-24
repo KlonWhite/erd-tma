@@ -1,15 +1,15 @@
-import { getTelegramInitData, waitForTelegramInitData } from './telegramInitData.js';
+import { getTelegramIdentity } from './telegramIdentity.js';
 
 async function wishlistRequest(action, data = {}) {
-  const initData = getTelegramInitData() || await waitForTelegramInitData();
-  if (!initData) {
+  const identity = await getTelegramIdentity();
+  if (!identity.initData && !identity.fallbackUser) {
     return null;
   }
 
   const res = await fetch('/api/wishlist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, initData, ...data }),
+    body: JSON.stringify({ action, ...identity, ...data }),
   });
 
   const payload = await res.json().catch(() => ({}));

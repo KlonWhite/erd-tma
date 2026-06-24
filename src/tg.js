@@ -54,21 +54,31 @@ function parseInitDataUser() {
   }
 }
 
-function parseFallbackQueryUser() {
+function readFallbackQueryAuth() {
   if (typeof window === 'undefined') return null;
 
   try {
-    const raw = new URLSearchParams(window.location.search).get('tg_user');
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('tg_user');
     if (!raw) return null;
     const normalized = raw.replace(/-/g, '+').replace(/_/g, '/');
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
     const bytes = Uint8Array.from(window.atob(padded), (char) => char.charCodeAt(0));
     const json = new TextDecoder().decode(bytes);
     const user = JSON.parse(json);
-    return user?.id ? user : null;
+    if (!user?.id) return null;
+    return {
+      user,
+      fallbackUser: raw,
+      fallbackSignature: params.get('tg_sig') || '',
+    };
   } catch {
     return null;
   }
+}
+
+function parseFallbackQueryUser() {
+  return readFallbackQueryAuth()?.user ?? null;
 }
 
 // Initialize
@@ -90,6 +100,10 @@ const tg = {
   // User data
   get user() {
     return tgApp?.initDataUnsafe?.user ?? parseInitDataUser() ?? parseFallbackQueryUser();
+  },
+
+  get launchAuth() {
+    return readFallbackQueryAuth();
   },
 
   get userName() {
@@ -206,6 +220,11 @@ const tg = {
     const initData = tgApp?.initData;
     if (typeof initData === 'string' && initData.length > 0) return true;
     return Boolean(tgApp?.initDataUnsafe?.user?.id);
+  },
+
+  /** Telegram context detected either by signed initData or by bot keyboard launch payload. */
+  get hasTelegramUserContext() {
+    return this.isMiniApp || Boolean(this.launchAuth?.user?.id);
   },
 
   applyTheme() {

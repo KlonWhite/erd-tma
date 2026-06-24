@@ -1,15 +1,35 @@
-import { getTelegramInitData, waitForTelegramInitData } from './telegramInitData.js';
+import { getTelegramIdentity } from './telegramIdentity.js';
+
+export async function fetchProfile() {
+  const identity = await getTelegramIdentity();
+  if (!identity.initData && !identity.fallbackUser) {
+    return null;
+  }
+
+  const res = await fetch('/api/profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(identity),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload.error || 'Не удалось загрузить профиль');
+  }
+
+  return payload;
+}
 
 export async function fetchMyOrders() {
-  const initData = getTelegramInitData() || await waitForTelegramInitData();
-  if (!initData) {
+  const identity = await getTelegramIdentity();
+  if (!identity.initData && !identity.fallbackUser) {
     return [];
   }
 
   const res = await fetch('/api/my-orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ initData }),
+    body: JSON.stringify(identity),
   });
 
   const payload = await res.json().catch(() => ({}));

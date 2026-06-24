@@ -108,7 +108,7 @@ const useStore = create(
 
         set({ wishlist: next });
 
-        if (tg.isMiniApp) {
+        if (tg.hasTelegramUserContext) {
           toggleWishlistRemote(productId)
             .then((serverWishlist) => {
               if (serverWishlist) get().setWishlist(serverWishlist);

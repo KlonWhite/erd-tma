@@ -4,7 +4,7 @@ import Rule from '../components/Rule.jsx';
 import Caps from '../components/Caps.jsx';
 import BottomNav from '../components/BottomNav.jsx';
 import useStore from '../store/useStore.js';
-import { fetchMyOrders } from '../lib/accountApi.js';
+import { fetchMyOrders, fetchProfile } from '../lib/accountApi.js';
 import tg from '../tg.js';
 
 const STATUS_META = {
@@ -50,12 +50,15 @@ export default function Account() {
   const [tgUser, setTgUser] = useState(tg.user);
   const localOrders = useStore(s => s.orders);
   const wishlist = useStore(s => s.wishlist);
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(tg.hasTelegramUserContext);
+  const [profileError, setProfileError] = useState('');
   const [serverOrders, setServerOrders] = useState(null);
-  const [loadingOrders, setLoadingOrders] = useState(tg.isMiniApp);
+  const [loadingOrders, setLoadingOrders] = useState(tg.hasTelegramUserContext);
   const [ordersError, setOrdersError] = useState('');
 
   useEffect(() => {
-    if (tgUser?.id || !tg.isMiniApp) return undefined;
+    if (tgUser?.id || !tg.hasTelegramUserContext) return undefined;
 
     const started = Date.now();
     const timer = window.setInterval(() => {
@@ -72,8 +75,45 @@ export default function Account() {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadProfile() {
+      if (!tg.hasTelegramUserContext) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      setLoadingProfile(true);
+      setProfileError('');
+      try {
+        const result = await fetchProfile();
+        if (!cancelled) {
+          setProfile(result);
+          if (result?.user?.id) {
+            setTgUser({
+              id: result.user.id,
+              first_name: result.user.firstName,
+              username: result.user.username,
+            });
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[account] profile:', err);
+          setProfileError(err.message ?? 'Не удалось загрузить профиль');
+        }
+      } finally {
+        if (!cancelled) setLoadingProfile(false);
+      }
+    }
+
+    loadProfile();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadOrders() {
-      if (!tg.isMiniApp) return;
+      if (!tg.hasTelegramUserContext) return;
       setLoadingOrders(true);
       setOrdersError('');
       try {
@@ -94,17 +134,26 @@ export default function Account() {
   }, []);
 
   const orders = useMemo(
-    () => (serverOrders ?? (tg.isMiniApp ? [] : localOrders)).map(normalizeOrder),
+    () => (serverOrders ?? (tg.hasTelegramUserContext ? [] : localOrders)).map(normalizeOrder),
     [serverOrders, localOrders],
   );
 
+  const profileUser = profile?.user ?? {};
+  const roles = profileUser.roles ?? [];
+  const memberStatus = roles.includes('admin') ? 'ADMIN' : 'CLIENT';
+  const launchSource = profile?.source === 'botKeyboard' ? 'BOT' : 'TG';
   const STATS = [
-    ['ЗАКАЗЫ', String(orders.length)],
-    ['ИЗБРАННОЕ', String(wishlist.length)],
-    ['АДРЕСА', '1'],
-    ['ОПЛАТА', 'TG'],
+    ['ЗАКАЗЫ', String(profile?.stats?.orders ?? orders.length)],
+    ['ИЗБРАННОЕ', String(profile?.stats?.wishlist ?? wishlist.length)],
+    ['СТАТУС', memberStatus],
+    ['ВХОД', tg.hasTelegramUserContext ? launchSource : 'WEB'],
   ];
-  const name = (tgUser?.first_name || tgUser?.username || 'MEMBER').toUpperCase();
+  const name = (profileUser.firstName || tgUser?.first_name || tgUser?.username || 'MEMBER').toUpperCase();
+  const username = profileUser.username || tgUser?.username || '';
+  const telegramId = profileUser.id || tgUser?.id || null;
+  const memberSince = profileUser.memberSince
+    ? formatDate(profileUser.memberSince)
+    : '';
 
   return (
     <>
@@ -126,9 +175,30 @@ export default function Account() {
             ПРИВЕТ,<br />
             <span style={{ fontStyle: 'italic' }}>{name}.</span>
           </div>
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <Caps size={9} weight={800} color="var(--erd-muted)">
+              {loadingProfile ? 'ПРОФИЛЬ ЗАГРУЖАЕТСЯ…' : `${memberStatus} · ${tg.hasTelegramUserContext ? 'TELEGRAM VERIFIED' : 'LOCAL PREVIEW'}`}
+            </Caps>
+            {(username || telegramId) && (
+              <Caps size={9} weight={700} color="var(--erd-muted)">
+                {username ? `@${username}` : 'TELEGRAM'}{telegramId ? ` · ID ${telegramId}` : ''}
+              </Caps>
+            )}
+            {memberSince && (
+              <Caps size={8} weight={700} color="var(--erd-muted)">В КЛУБЕ С {memberSince}</Caps>
+            )}
+          </div>
         </div>
 
         <Rule />
+
+        {profileError && (
+          <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--erd-rule)' }}>
+            <Caps size={9} weight={700} color="var(--erd-ox)">
+              {profileError}. Откройте магазин через /start в боте, чтобы обновить доступ.
+            </Caps>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
           {STATS.map(([k, v], i) => (

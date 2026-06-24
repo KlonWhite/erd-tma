@@ -2,20 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   createOrderOnServer,
   getServerSupabase,
-  validateTelegramInitData,
   type CreateOrderPayload,
 } from '../shared/dist/index.js';
 import {
   badRequest,
-  getBotToken,
   methodNotAllowed,
   readJsonBody,
   serverError,
   unauthorized,
 } from './_lib/http.js';
+import { resolveTelegramIdentity } from './_lib/telegramIdentity.js';
 
 interface OrdersBody {
-  initData: string;
+  initData?: string;
+  fallbackUser?: string;
+  fallbackSignature?: string;
   order: CreateOrderPayload;
 }
 
@@ -26,22 +27,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const botToken = getBotToken();
-    const { initData, order } = readJsonBody<OrdersBody>(req);
+    const { order, ...identityBody } = readJsonBody<OrdersBody>(req);
 
-    if (!initData || !order?.items?.length) {
-      badRequest(res, 'initData and order.items are required');
+    if ((!identityBody.initData && !identityBody.fallbackUser) || !order?.items?.length) {
+      badRequest(res, 'Telegram identity and order.items are required');
       return;
     }
 
-    const user = validateTelegramInitData(initData, botToken);
-    if (!user?.id) {
-      unauthorized(res, 'Invalid Telegram initData');
+    const identity = resolveTelegramIdentity(identityBody);
+    if (!identity?.user?.id) {
+      unauthorized(res, 'Invalid Telegram identity');
       return;
     }
 
     const supabase = getServerSupabase();
-    const created = await createOrderOnServer(supabase, order, user);
+    const created = await createOrderOnServer(supabase, order, identity.user);
 
     res.status(200).json({
       ok: true,

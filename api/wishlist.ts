@@ -1,20 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {
-  getServerSupabase,
-  validateTelegramInitData,
-} from '../shared/dist/index.js';
+import { getServerSupabase } from '../shared/dist/index.js';
 import {
   badRequest,
-  getBotToken,
   methodNotAllowed,
   readJsonBody,
   serverError,
   unauthorized,
 } from './_lib/http.js';
+import { resolveTelegramIdentity } from './_lib/telegramIdentity.js';
 
 interface WishlistBody {
   action?: 'list' | 'toggle' | 'sync';
-  initData: string;
+  initData?: string;
+  fallbackUser?: string;
+  fallbackSignature?: string;
   productId?: string;
   productIds?: string[];
 }
@@ -46,15 +45,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { action = 'list', initData, productId, productIds = [] } = readJsonBody<WishlistBody>(req);
-    if (!initData) {
-      badRequest(res, 'initData is required');
+    const { action = 'list', productId, productIds = [], ...identityBody } = readJsonBody<WishlistBody>(req);
+    if (!identityBody.initData && !identityBody.fallbackUser) {
+      badRequest(res, 'Telegram identity is required');
       return;
     }
 
-    const user = validateTelegramInitData(initData, getBotToken());
-    if (!user?.id) {
-      unauthorized(res, 'Invalid Telegram initData');
+    const identity = resolveTelegramIdentity(identityBody);
+    if (!identity?.user?.id) {
+      unauthorized(res, 'Invalid Telegram identity');
       return;
     }
 
@@ -70,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: existing, error: findError } = await supabase
         .from('wishlists')
         .select('id')
-        .eq('client_telegram_id', user.id)
+        .eq('client_telegram_id', identity.user.id)
         .eq('product_id', id)
         .maybeSingle();
 
@@ -85,13 +84,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         const { error } = await supabase
           .from('wishlists')
-          .insert({ client_telegram_id: user.id, product_id: id });
+          .insert({ client_telegram_id: identity.user.id, product_id: id });
         if (error) throw error;
       }
 
       res.status(200).json({
         ok: true,
-        wishlist: await getWishlist(supabase, user.id),
+        wishlist: await getWishlist(supabase, identity.user.id),
       });
       return;
     }
@@ -108,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const knownIds = new Set((products ?? []).map((p) => p.id));
         const rows = ids
           .filter((id) => knownIds.has(id))
-          .map((id) => ({ client_telegram_id: user.id, product_id: id }));
+          .map((id) => ({ client_telegram_id: identity.user.id, product_id: id }));
 
         if (rows.length) {
           const { error } = await supabase
@@ -120,14 +119,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       res.status(200).json({
         ok: true,
-        wishlist: await getWishlist(supabase, user.id),
+        wishlist: await getWishlist(supabase, identity.user.id),
       });
       return;
     }
 
     res.status(200).json({
       ok: true,
-      wishlist: await getWishlist(supabase, user.id),
+      wishlist: await getWishlist(supabase, identity.user.id),
     });
   } catch (err) {
     serverError(res, err);

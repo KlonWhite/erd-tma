@@ -7,7 +7,7 @@ export default function useWishlistSync() {
   const didRun = useRef(false);
 
   useEffect(() => {
-    if (didRun.current || !tg.isMiniApp) return;
+    if (didRun.current || !tg.hasTelegramUserContext) return;
     didRun.current = true;
 
     const current = useStore.getState().wishlist;
